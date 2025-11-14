@@ -152,11 +152,11 @@ A partir de las variables generales definidas anteriormente, el sistema se dise�
 
 El siguiente diagrama muestra la secuencia de operación implementada:
 
-<img width="1025" height="769" alt="image" src="https://github.com/user-attachments/assets/7de04ad9-6228-4bc6-8c62-1da8e9fab404" />
+![.](imagenesWiki/diagrama.png)
 
 ## Desarrollo del Sistema
 
-![.](imagenesWiki/diagrama.jpg)
+![.](imagenesWiki/diagrama1.png)
 
 
 ### Programación Ladder
