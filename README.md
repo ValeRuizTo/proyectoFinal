@@ -119,6 +119,14 @@ El diseño del prototipo de Sorting Line with Color Detection se fundamenta en l
 | Output0_1 | [Output]| BOOL  | Motor M2 — Motor de la válvula (o alimentador de válvulas)             |
 | Output0_2 | [Output]| BOOL  | V1 — Solenoide / válvula para piezas blancas                           |
 
+### Diagrama de función secuencial
+
+A partir de las variables generales definidas anteriormente, el sistema se diseñó bajo un enfoque de control secuencial por etapas (Step Sequence Control). Cada etapa (S) representa un estado del proceso, mientras que las transiciones se activan cuando se cumplen condiciones de sensores (entradas).
+
+El siguiente diagrama muestra la secuencia de operación implementada:
+
+![.](imagenesWiki/diagrama.png)
+
 #### Descripción de la secuencia:
 
 
@@ -146,13 +154,7 @@ El diseño del prototipo de Sorting Line with Color Detection se fundamenta en l
   - Una vez completada la expulsión, las salidas se resetean (R), las válvulas vuelven a su posición inicial.
   - El sistema queda listo para el siguiente objeto.
 
-### Diagrama de función secuencial
 
-A partir de las variables generales definidas anteriormente, el sistema se diseñó bajo un enfoque de control secuencial por etapas (Step Sequence Control). Cada etapa (S) representa un estado del proceso, mientras que las transiciones se activan cuando se cumplen condiciones de sensores (entradas).
-
-El siguiente diagrama muestra la secuencia de operación implementada:
-
-![.](imagenesWiki/diagrama.png)
 
 ## Desarrollo del Sistema
 
