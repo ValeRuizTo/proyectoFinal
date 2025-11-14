@@ -127,6 +127,7 @@ El siguiente diagrama muestra la secuencia de operación implementada:
 
 ![.](imagenesWiki/diagrama.png)
 
+
 #### Descripción de la secuencia:
 
 
