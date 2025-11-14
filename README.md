@@ -46,35 +46,94 @@ El ESP32 ejecuta firmware en C, mediante el cual lee los sensores (sensor de col
 
 ## 2. Etapas de diseño
 
+### Flujo definido
+
+- Percepción física → sensores
+- Actuación física → válvulas y motor
+- Control local → ESP32 (Arduino)
+- Supervisión y visualización → CODESYS + HMI + Ladder
+- Comunicación  → Modbus TCP
+- Conectividad IIoT → MQTT → Ubidots
+- Representación digital en tiempo real → Gemelo digital
+
+
 ### Análisis del proceso
 
 El sistema corresponde a una máquina clasificadora de objetos por color (sorting color machine). El flujo general del proceso es el siguiente:
-- Alimentación y transporte:
-  - Un motor acciona la banda transportadora.
-  - En la zona inicial se ubica un sensor infrarrojo de presencia, que detecta si hay un objeto colocado sobre la banda.
-    - Si no se detecta objeto, la banda permanece detenida.
-    - Si se detecta objeto, la banda se activa y comienza el transporte.
 
-- Detección de color:
-  - Mientras el objeto avanza, ingresa a una cámara de detección (caja roja).
-  - Allí, un sensor de color identifica el color del objeto.
+1. ***Inicio del sistema***
 
-- Salida de la cámara y temporización:
+- El sistema se encuentra en estado de reposo, con la banda transportadora detenida y las válvulas neumáticas cerradas.
+- El usuario puede iniciar el ciclo desde:
+  - el prototipo físico o
+  - el gemelo digital en CODESYS (HMI).
+- El recibir la señal de inicio, CODESYS envía la orden vía Modbus al ESP32, activando el motor principal (M1) si corresponde.
 
-  - Al abandonar la caja roja, un segundo sensor infrarrojo confirma la salida del objeto.
-  - En este punto, el sistema activa un contador/temporizador asociado al color detectado.
-  - Este contador genera un retardo  que asegura que el objeto se encuentre correctamente alineado con el mecanismo de clasificación antes de actuar.
+2. ***Detección inicial de pieza***
 
-- Clasificación por color:
+- Un sensor infrarrojo ubicado al inicio de la banda detecta la presencia de una pieza.
+- El ESP32 registra este evento y actualiza el registro Modbus correspondiente.
+- El gemelo digital refleja inmediatamente la detección en el HMI.
+  - Si no hay pieza, la banda permanece detenida.
+  - Si hay pieza, el motor arranca y comienza el transporte.
 
-  - Una vez transcurrido el tiempo definido por el contador, se habilita la válvula solenoide correspondiente al color detectado.
+3. ***Transporte hacia la cámara de detección (caja roja)***
 
-  - Las válvulas son normalmente cerradas (NC) [4]: Con señal eléctrica, se abren y permiten el paso de aire comprimido, el aire acciona un cilindro neumático (pistón), que empuja la pieza hacia el compartimiento asignado según su color, cuando la válvula deja de recibir señal, se cierra y el pistón retorna a su posición inicial por medio de un resorte.
+- La pieza avanza sobre la banda transportadora.
+- El ESP32 continúa enviando actualizaciones periódicas a CODESYS.
 
-- Verificación de clasificación:
-  - En cada compartimiento de descarga hay un sensor infrarrojo final, encargado de verificar si la pieza llegó correctamente.
-  - Si la pieza fue clasificada, el sistema detiene la banda transportadora y reinicia el ciclo para el siguiente objeto.
+4. ***Detección de color***
 
+- La pieza ingresa a la cámara de detección (caja roja).
+- El sensor de color mide el valor de reflexión y determina el color:
+  - Blanco
+  - Rojo
+  - Azul
+
+- El ESP32 registra el color detectado y lo publica en un registro Modbus.
+
+- El HMI actualiza automáticamente la variable de color detectado.
+
+- El color queda almacenado para usarlo en la etapa de clasificación.
+- El color detectado se publica a Ubidots mediante MQTT
+
+5. ***Confirmación de salida + Temporización***
+
+- Un segundo sensor infrarrojo confirma que la pieza salió de la caja roja.
+
+- Dependiendo del color detectado, se activa un temporizador específico (T1, T2 o T3).
+
+- El temporizador proporciona un retardo preciso para que la pieza llegue a la estación adecuada antes de actuar.
+
+- El avance del temporizador se muestra en tiempo real en el HMI del gemelo digital.
+
+
+6.***Clasificación por color***
+
+- Una vez finalizado el temporizador, CODESYS activa el registro Modbus que corresponde a la válvula adecuada.El ESP32 recibe el comando y energiza la válvula solenoide (NC).
+- La válvula permite el paso de aire comprimido hacia el cilindro neumático.
+- El pistón empuja la pieza hacia su compartimiento de clasificación correcto.
+- La válvula se desactiva cuando se completa el tiempo de actuación.
+- El pistón retorna a su posición inicial mediante un resorte.
+- El HMI muestra cuál válvula fue activada (V1, V2 o V3).
+
+7. ***Verificación de clasificación***
+
+- En cada compartimiento de salida hay un sensor infrarrojo final (F3, F4, F5).
+
+- Al detectar la llegada de la pieza, el sensor envía la señal al ESP32.
+
+- El ESP32 actualiza los registros Modbus, informando a CODESYS que la clasificación fue exitosa.
+
+- El HMI muestra el resultado y marca la etapa como completada.
+- El registro se envia a Ubidots mediante MQTT
+
+8. ***Detención temporal y reinicio del ciclo***
+
+- Tras la verificación de la clasificación, la banda se detiene.
+- El sistema reinicia todas las salidas (Reset).
+- Se vuelve al estado de inicio del proceso (S000).
+- El sistema queda listo para recibir la siguiente pieza.
 
 ### Restricciones de diseño
 
