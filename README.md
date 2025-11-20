@@ -26,7 +26,7 @@ La línea de clasificación consiste en [1]:
 ### Gemelo digital
 #### *Descripcion*
 
-Un gemelo digita es una representación virtual de un objeto o sistema diseñado para reflejar un objeto físico con precisión. Abarca el ciclo de vida del objeto, se actualiza a partir de datos en tiempo real y utiliza la simulación, el machine learning y el razonamiento para ayudar a tomar decisiones. [2]
+Un gemelo digital es una representación virtual de un objeto o sistema diseñado para reflejar un objeto físico con precisión. Abarca el ciclo de vida del objeto, se actualiza a partir de datos en tiempo real y utiliza la simulación, el machine learning y el razonamiento para ayudar a tomar decisiones. [2]
 
 El gemelo digital desarrollado en CODESYS consiste en una réplica virtual, interactiva y conectada en tiempo real de la máquina física de clasificación por color. A través de programación en Ladder y de una interfaz HMI integrada, el gemelo digital reproduce fielmente el comportamiento del prototipo, mostrando el estado de los sensores, actuadores, temporizadores y etapas secuenciales mientras el proceso ocurre físicamente.
 
@@ -36,13 +36,24 @@ De esta manera, el gemelo digital cumple funciones de supervisión, diagnóstico
 
 #### *Funcionamiento*
 
-Para habilitar la comunicación bidireccional entre el prototipo físico y el gemelo digital implementado en CODESYS, se utiliza Modbus TCP como protocolo de enlace. En este esquema, el gateway virtualizado de CODESYS actúa como maestro Modbus, mientras que el ESP32 funciona como un microcontrolador con rol de PLC esclavo, encargado de gestionar el hardware físico de la línea de clasificación.
+Para habilitar la comunicación bidireccional entre el prototipo físico y el gemelo digital implementado en CODESYS, se emplea Modbus TCP como protocolo industrial de enlace. En esta arquitectura, CODESYS Control RTE opera como dispositivo maestro Modbus, mientras que el ESP32 actúa como esclavo, funcionando como una capa de interfaz entre el controlador virtual y el hardware físico de la máquina.
 
-El ESP32 ejecuta firmware en C, mediante el cual lee los sensores (sensor de color, barreras infrarrojas y detectores de posición), controla los actuadores neumáticos y motores, y publica su estado a través de registros Modbus accesibles por el entorno de CODESYS. Cada actualización del proceso físico se transmite al sistema digital, permitiendo que el HMI muestre en tiempo real el comportamiento del prototipo. De igual manera, cuando CODESYS envía comandos Modbus el ESP32 los recibe y los ejecuta directamente sobre el hardware.
+A diferencia de un PLC tradicional, el ESP32 no ejecuta la lógica de control del proceso. Toda la lógica secuencial, temporización, condiciones de clasificación y etapas del ciclo se programan en Ladder dentro de CODESYS, donde reside el “cerebro” del sistema. El ESP32 cumple un rol estrictamente operativo y de comunicación:
+
+- Lee y digitaliza las señales de los sensores físicos
+(sensor de color, barreras IR, encoder de pulsos, finales de carrera).
+
+- Publica estas señales como registros Modbus para que CODESYS las consulte.
+
+- Recibe desde CODESYS los comandos de actuación (activar válvula, encender motor, expulsar pieza) a través de coils o holding registers.
+
+- Ejecuta físicamente esos comandos mediante salidas digitales conectadas a los actuadores del prototipo.
+
+Con este esquema, cada cambio que ocurre en el prototipo físico se refleja en tiempo real en el gemelo digital, y cada acción ordenada desde el HMI en CODESYS se replica inmediatamente en el hardware mediante el ESP32.
 
   - **Modbus**: El protocolo Modbus sigue una arquitectura de maestro y esclavo, en la que un maestro transmite una solicitud a un esclavo y espera la respuesta. Esta arquitectura brinda al maestro control completo sobre el flujo de información [3]. Teniendo en cuenta lo anterior, Modbus permite que el ESP32 actúe como esclavo PLC, exponiendo a través de registros Modbus el estado de sensores como el detector de color, barreras infrarrojas y señales de posición. CODESYS, operando como maestro Modbus, consulta estos registros y refleja en tiempo real estos datos en el gemelo digital y en el HMI. Esto garantiza que la visualización digital siempre muestre lo que ocurre físicamente en el prototipo.
 
-  - **Esp32**: cumple un papel central al funcionar como el microcontrolador PLC encargado de la interacción directa con el prototipo físico de la máquina de clasificación. Es el dispositivo responsable de ejecutar la lógica de adquisición de datos, control de actuadores y comunicación hacia la capa digital mediante Modbus. En resumen, Expone datos y recibe comandos mediante Modbus, permitiendo la conexión con CODESYS, sincroniza el proceso real con el gemelo digital, asegurando una visualización y un control en tiempo real y hace posible sea interactivo, ejecutando tanto la lógica interna como las acciones enviadas desde la capa digital.
+  - **Esp32**: no contiene lógica de decisión ni algoritmos de control secuencial. Su función es servir como puente físico-digital, permitiendo que CODESYS controle el proceso como un PLC industrial, toma los valores de sensores físicos y los traduce a registros Modbus, recibe desde CODESYS las señales de control (coils) y energiza directamente los actuadores conectados, actualiza continuamente los registros para que el gemelo digital y la HMI reflejen el estado real del sistema, convierte los comandos PLC a señales eléctricas hacia válvulas y motor
 
 ## 2. Etapas de diseño
 
@@ -263,6 +274,10 @@ El siguiente diagrama muestra la secuencia de operación implementada:
 ## Desarrollo del Sistema
 
 ![.](imagenesWiki/diagrama1.png)
+
+
+### Firmware del ESP32 (Modbus TCP + TCS230 (sensor color) + MQTT)
+
 
 
 ### Programación Ladder
