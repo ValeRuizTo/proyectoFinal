@@ -376,6 +376,8 @@ Este canal permite leer múltiples registros provenientes de la ESP32. Su propó
   * Rojo
   * Azul
   * Blanco
+ 
+* Leer el estado de las variables ON/OFF tanto físicas como en Ubidots.
 
 Este canal agrupa todas estas señales en un solo bloque de lectura periódica.
 
@@ -411,7 +413,7 @@ Esto permite que el PLC gestione directamente desde el ladder el encendido y apa
 
 Finalmente, se realizó el mapeo entre los registros Modbus y las variables del programa en CODESYS. Se asignaron nombres coherentes y se emplearon exactamente esos mismos identificadores dentro del ladder para garantizar la correcta vinculación entre canal y variable.
 
-<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/d6c38e16-cb30-496f-a46f-d58e0d9d33e3" />
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/fb4d509f-3946-4ce1-acc2-45dfd8afc423" />
 
 
 
