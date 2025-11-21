@@ -36,7 +36,7 @@ De esta manera, el gemelo digital cumple funciones de supervisión, diagnóstico
 
 #### *Funcionamiento*
 
-Para habilitar la comunicación bidireccional entre el prototipo físico y el gemelo digital implementado en CODESYS, se emplea Modbus TCP como protocolo industrial de enlace. En esta arquitectura, CODESYS Control RTE opera como dispositivo maestro Modbus, mientras que el ESP32 actúa como esclavo, funcionando como una capa de interfaz entre el controlador virtual y el hardware físico de la máquina.
+Para habilitar la comunicación bidireccional entre el prototipo físico y el gemelo digital implementado en CODESYS, se emplea Modbus TCP como protocolo industrial de enlace. En esta arquitectura, CODESYS Control opera como dispositivo maestro Modbus, mientras que el ESP32 actúa como esclavo, funcionando como una capa de interfaz entre el controlador virtual y el hardware físico de la máquina.
 
 A diferencia de un PLC tradicional, el ESP32 no ejecuta la lógica de control del proceso. Toda la lógica secuencial, temporización, condiciones de clasificación y etapas del ciclo se programan en Ladder dentro de CODESYS, donde reside el “cerebro” del sistema. El ESP32 cumple un rol estrictamente operativo y de comunicación:
 
