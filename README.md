@@ -363,7 +363,9 @@ El diseño del prototipo de Sorting Line with Color Detection se fundamenta en l
 
 - El código y los esquemáticos deben estar completamente documentados para garantizar mantenibilidad.
 
-### Variables Generales del Sistema| Nombre        | Tipo   | Dirección | Uso en el sistema                                                  |
+### Variables Generales del Sistema
+
+| Nombre        | Tipo   | Dirección | Uso en el sistema                                                  |
 | ------------- | ------ | --------- | ------------------------------------------------------------------ |
 | **Input0_0**  | Input  | ISTS 0    | Sensor F1 — Detector de entrada (pieza ingresa al sistema)         |
 | **Input0_1**  | Input  | ISTS 1    | Sensor F2 — Detector intermedio                                    |
