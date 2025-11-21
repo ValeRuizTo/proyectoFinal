@@ -1090,6 +1090,47 @@ El loop principal quedó libre para Modbus + MQTT + lógica de sincronización.
 Se probaron sensores uno a uno, válvulas una a una, timers por color, ciclo completo varias veces, arranques físicos y digitales, comunicacion con Ubidots y todo esto permitio asegurar que la integración no solo funcionaba de manera aislada, sino también como sistema completo interconectado.
 
 
+5. Análisis de voltajes y arquitectura eléctrica
+
+La estabilidad del sistema también dependió de un diseño eléctrico adecuado que separara etapas de potencia y control:
+
+a) Etapa de potencia (12 V → 9 V para actuadores)
+
+- El motor, compresor y válvulas funcionan desde 12 V, distribuidos a través de dos puentes H.
+
+Los puentes H entregan aproximadamente 9 V a los actuadores, suficiente para su operación y evitando sobrevoltaje.
+
+Esta separación evitó interferencias y ruidos inducidos en la capa de control.
+
+b) Etapa de sensores (5 V)
+
+- Los fototransistores MH se alimentan a 5 V (Arduino), aislados de la etapa de potencia.
+
+- El uso de protoboards independientes redujo el ruido eléctrico.
+
+- Todos los grounds se mantuvieron comunes, garantizando referencia eléctrica compartida.
+
+c) Sensor de color (3.3 V)
+
+- El TCS230 se alimenta directamente desde el ESP32, protegiéndolo de sobrevoltaje.
+
+- La estabilidad mejoró notablemente tras aislarlo físicamente en la cámara oscura.
+
+d) Conclusión eléctrica
+
+La correcta distribución de voltajes permitió:
+
+- Evitar daños en sensores o actuadores.
+
+- Prevenir caídas de tensión al activar válvulas.
+
+- Garantizar niveles lógicos confiables para Modbus.
+
+- Asegurar estabilidad continua incluso con cargas inductivas.
+
+
+
+
 ## Conclusiones
 
 
