@@ -70,7 +70,46 @@ Con este esquema, cada cambio que ocurre en el prototipo físico se refleja en t
 
 ### Diagramas UML 
 
-.
+#### 1. Diagrama de bloques 
+
+Este diagrama representa la arquitectura completa del sistema de clasificación por color integrado con su gemelo digital y plataforma IIoT:
+
+- El prototipo físico envía señales de sensores al ESP32 y recibe activación de actuadores desde él.
+
+- El ESP32 actúa como interfaz física–digital:
+
+  - Expone sensores y actuadores mediante Modbus TCP (esclavo).
+
+  - Publica datos a Ubidots mediante MQTT.
+
+  - No ejecuta la lógica del proceso.
+
+- CODESYS funciona como PLC maestro y cerebro del sistema, ejecutando la lógica Ladder y actualizando el HMI/gemelo digital.
+
+- Ubidots recibe los conteos vía MQTT para visualización en la nube.
+
+El flujo completo es:
+
+Físico → ESP32 (Modbus) → CODESYS (Ladder/HMI) → ESP32 (Modbus) → Actuadores → Ubidots MQTT
+
+![.](imagenesWiki/diagramabloques.png)
+
+#### 2. Diagrama de secuencia — Sincronización Modbus entre CODESYS y ESP32 
+
+El diagrama de secuencia muestra el ciclo completo de interacción entre el ESP32 (esclavo Modbus), el PLC virtual en CODESYS (maestro Modbus), los sensores físicos y los actuadores del prototipo. Representa cómo se mantiene sincronizado el sistema físico con el gemelo digital, asegurando que el estado físico y digital coincidan en todo momento
+
+| Flujo                     | Origen → Destino             | Protocolo                | Función                                             |
+| ------------------------- | ---------------------------- | ------------------------ | --------------------------------------------------- |
+| Sensores → Gemelo digital | Físico → ESP32 → CODESYS     | Modbus Read Input Status | Sincroniza el estado físico con la interfaz HMI     |
+| CODESYS → Actuadores      | CODESYS → ESP32 → actuadores | Modbus Write Single Coil | Ejecuta acciones de control sobre la máquina física |
+| CODESYS → Ubidots         | CODESYS → ESP32 → Ubidots    | Modbus + MQTT            | Telemetría IIoT hacia la nube                       |
+
+
+![.](imagenesWiki/secuenciaModbus.png)
+
+#### 3. Diagrama de secuencia — Publicación MQTT
+
+
 
 
 .
