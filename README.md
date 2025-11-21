@@ -306,13 +306,13 @@ Publicación a Ubidots
 
    El dashboard de ubitos se ve de la siguiente manera y muestra la cantidad de fichas que ha clasificado correctamente por cada color, así como los botones para parar o iniciar el sistema, es importante tomar en cuenta que para que el sistema se inicie al presionar el boton tambien tiene que estar activado el sensor infrarrojo inicial que detecta la pieza, tal como está validado en el montaje físico.
 
-  ![.](imagenesWiki/mqtt.png)
+  ![.](imagenesWiki/imgUbitosIIoT.jpg)
 
   Asimismo se integró un sistema de alertas que envía una notificación SMS al número de uno de los integrantes del grupo, número que puede ser modificado a necesidad. La notificación es activada cuando la cantidad de fichas clasificadas en un color llega a un valor de 3 o superior. Si el rojo llega a 3 o superior manda una notificación especificando que dicho color llegó a la cantidad que tiene actualmente siempre y cuando supere el valor establecido así como el tiempo en el que sucedió. Esta lógica se repite con los otros colores. También se podrían mandar por correo pero la inmediatez de SMS hizo que éste tuviera prioridad para nuestro sistema de comunicación / alertas.
 
-  ![.](imagenesWiki/mqtt.png)
+  ![.](imagenesWiki/imgAlertaRojo.jpg)
 
-  ![.](imagenesWiki/mqtt.png)
+  ![.](imagenesWiki/imgAlertaRojoMSG.jpg)
 
 
 8. ***Detención temporal y reinicio del ciclo***
