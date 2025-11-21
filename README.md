@@ -314,6 +314,11 @@ Publicación a Ubidots
 
   ![.](imagenesWiki/imgAlertaRojoMSG.jpg)
 
+  Mensajes de SMS:
+
+  ![.](imagenesWiki/imgMensajeSMS.jpg)
+  
+
 
 8. ***Detención temporal y reinicio del ciclo***
 
