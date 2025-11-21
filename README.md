@@ -338,6 +338,212 @@ El siguiente diagrama muestra la secuencia de operación implementada:
 
 
 
+El firmware desarrollado para la ESP32 cumple cuatro funciones principales dentro del sistema:  
+1) actuar como **esclavo Modbus TCP** frente al controlador CODESYS,  
+2) operar como **cliente MQTT** para la comunicación con Ubidots,  
+3) ejecutar el **procesamiento autónomo del sensor de color TCS230**, y  
+4) gestionar las **entradas físicas y salidas hacia actuadores**.  
+
+El diseño se implementó bajo una arquitectura multitarea basada en FreeRTOS, con mecanismos de sincronización por mutex, garantizando operación concurrente y confiable en un entorno de automatización.
+
+#### 1. Arquitectura general
+
+La estructura del firmware se organiza en cuatro módulos independientes que cooperan entre sí:
+
+- **Servidor Modbus TCP:** expone los registros e indicadores que CODESYS consulta y escribe.  
+- **MQTT + Ubidots:** maneja la recepción de comandos START/STOP remotos y la publicación periódica de contadores.  
+- **Task FreeRTOS para TCS230:** procesa el sensor de color en un hilo dedicado, evitando afectar el tiempo de respuesta del sistema principal.  
+- **Capa física:** lectura de sensores IR, botones locales y accionamiento de actuadores.
+
+Esta organización modular permite desacoplar la lógica industrial (ejecutada exclusivamente en CODESYS) de la capa de adquisición y comunicación de la ESP32.
+
+
+
+#### 2. Mapeo Modbus implementado
+
+El dispositivo expone un conjunto de **Input Status (ISTS)**, **Holding Registers (HREG)** y **Coils**, definidos de acuerdo con las necesidades del proceso de clasificación.
+
+##### **2.1 Entradas discretas (ISTS)**
+| Dirección | Descripción |
+|----------|-------------|
+| 0–4      | Sensores infrarrojos físicos |
+| 5        | Detección: ROJO (TCS230) |
+| 6        | Detección: BLANCO (no utilizado) |
+| 7        | Detección: AZUL (TCS230) |
+| 8        | Botón físico START |
+| 9        | Botón físico STOP |
+| 10       | Comando START desde Ubidots |
+| 11       | Comando STOP desde Ubidots |
+
+Fragmento de registro:
+
+```cpp
+mb.addIsts(ISTS_COLOR_ROJO);
+mb.addIsts(ISTS_START_FISICO);
+mb.addIsts(ISTS_START_UBIDOTS);
+```
+
+
+##### **2.2 Holding Registers (HREG)**
+
+Utilizados únicamente para recibir desde CODESYS los contadores de piezas clasificadas.
+
+| HREG | Variable       |
+| ---- | -------------- |
+| 0    | contador_rojo  |
+| 1    | contador_verde |
+| 2    | contador_azul  |
+
+Ejemplo de declaración:
+
+```cpp
+mb.addHreg(HREG_COUNTER_ROJO, 0);
+```
+
+
+##### **2.3 Coils (salidas hacia actuadores)**
+
+Controladas exclusivamente por CODESYS.
+
+| Coil | Actuador                     |
+| ---- | ---------------------------- |
+| 0    | Motor principal              |
+| 1    | Compresor                    |
+| 2–4  | Válvulas solenoides 1, 2 y 3 |
+
+Ejemplo:
+
+```cpp
+digitalWrite(CoilsPins[i], mb.Coil(CoilsAddresses[i]) ? HIGH : LOW);
+```
+
+#### 3. Procesamiento del sensor TCS230 mediante FreeRTOS
+
+El sensor de color TCS230 requiere un procesamiento continuo que podría bloquear tareas críticas si se ejecutara en el hilo principal.
+Por este motivo, se implementa una **task FreeRTOS dedicada**, fijada al **core 0**, donde se realizan:
+
+* configuración inicial del sensor,
+* una fase de calibración temporal,
+* lectura periódica de canales rojo y azul,
+* cálculo de incrementos respecto a la línea base,
+* actualización de banderas lógicas Modbus.
+
+Creación de la tarea:
+
+```cpp
+xTaskCreatePinnedToCore(
+  taskColorSensor,
+  "ColorSensorTask",
+  4096,
+  NULL,
+  1,
+  NULL,
+  0    // Core 0
+);
+```
+
+Dentro de la tarea, la detección se estabiliza mediante lectura promedio y comparación con umbrales:
+
+```cpp
+long deltaR = c.r - gBaseR;
+long deltaB = c.b - gBaseB;
+
+bool localRojo = (deltaR > DELTA_UMBRAL_ROJO);
+bool localAzul = (deltaB > DELTA_UMBRAL_AZUL);
+```
+
+
+
+#### 4. Sincronización y protección contra condiciones de carrera
+
+Debido a que la tarea del TCS230 opera en paralelo con el bucle principal, es necesario garantizar la integridad de las variables compartidas.
+Para ello se emplea un **mutex FreeRTOS** que asegura acceso exclusivo al modificar o leer las banderas del color.
+
+Creación del mutex:
+
+```cpp
+colorMutex = xSemaphoreCreateMutex();
+```
+
+Escritura segura desde el hilo del sensor:
+
+```cpp
+xSemaphoreTake(colorMutex, portMAX_DELAY);
+gIsRojo = localRojo;
+gIsAzul = localAzul;
+xSemaphoreGive(colorMutex);
+```
+
+Lectura segura en el loop:
+
+```cpp
+xSemaphoreTake(colorMutex, pdMS_TO_TICKS(5));
+bool rojo = gIsRojo;
+bool azul = gIsAzul;
+xSemaphoreGive(colorMutex);
+```
+
+Este mecanismo evita inconsistencias en los datos expuestos a CODESYS.
+
+
+#### 5. Integración MQTT con Ubidots
+
+El firmware también integra comunicación IoT a través de MQTT.
+Se manejan dos flujos:
+
+#### **5.1 Recepción de comandos START/STOP remotos**
+
+Se suscriben variables tipo `/lv` desde Ubidots:
+
+```cpp
+mqttClient.subscribe("/v1.6/devices/esp32/start_cmd/lv");
+mqttClient.subscribe("/v1.6/devices/esp32/stop_cmd/lv");
+```
+
+El callback asigna los estados recibidos a variables expuestas vía Modbus:
+
+```cpp
+if (t.endsWith("start_cmd/lv")) ubidotsStartCmd = bit;
+if (t.endsWith("stop_cmd/lv"))  ubidotsStopCmd = bit;
+```
+
+Estas variables son posteriormente enviadas a CODESYS como `Input Status` (Ists 10 y 11).
+
+
+
+##### **5.2 Publicación de contadores hacia Ubidots**
+
+Los valores de conteo procesados en CODESYS y enviados por Modbus como HREG se publican periódicamente:
+
+```cpp
+payload += "\"contador_rojo\": {\"value\":" + String(cRojo) + "}";
+mqttClient.publish(topic.c_str(), payload.c_str());
+```
+
+#### 6. Ciclo principal del firmware
+
+El `loop()` coordina la actualización de todos los subsistemas:
+
+1. Atención del servidor Modbus
+2. Actualización de los estados físicos y virtuales
+3. Procesamiento de MQTT
+4. Publicación periódica de datos
+5. Accionamiento de actuadores según coils escritos por CODESYS
+
+Fragmento representativo:
+
+```cpp
+mb.task();                 // Actualiza Modbus TCP
+mqttClient.loop();         // Gestiona MQTT
+publishCountersToUbidots();// Cada 5 segundos
+```
+
+
+
+
+
+
+
 ### Programación Ladder
 
 ### 2.3 Definición de Variables para la implementación ladder
