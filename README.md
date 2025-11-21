@@ -72,67 +72,156 @@ Con este esquema, cada cambio que ocurre en el prototipo físico se refleja en t
 
 #### 1. Diagrama de bloques 
 
-Este diagrama representa la arquitectura completa del sistema de clasificación por color integrado con su gemelo digital y plataforma IIoT:
+Este diagrama representa la arquitectura completa del sistema de clasificación por color, integrando el prototipo físico, el PLC virtual en CODESYS, el ESP32 y la plataforma Ubidots en la nube.
 
-- El prototipo físico envía señales de sensores al ESP32 y recibe activación de actuadores desde él.
+El prototipo físico genera señales provenientes de los sensores (barreras infrarrojas, sensor de color TCS230, botones START/STOP) y recibe la activación de los actuadores (motor, compresor y válvulas neumáticas) en función de los comandos entregados por el controlador.
 
-- El ESP32 actúa como interfaz física–digital:
+El ESP32 actúa como la interfaz físico–digital del sistema y cumple tres funciones principales:
 
-  - Expone sensores y actuadores mediante Modbus TCP (esclavo).
+- Modbus TCP (esclavo):
+Expone todos los sensores físicos (ISTS 0–11) y ejecuta las órdenes de actuación que CODESYS envía mediante coils.
+No toma decisiones ni ejecuta lógica de control.
 
-  - Publica datos a Ubidots mediante MQTT.
+- MQTT:
 
-  - No ejecuta la lógica del proceso.
+  - Publica a Ubidots los contadores del proceso recibidos desde CODESYS a través de Holding Registers.
 
-- CODESYS funciona como PLC maestro y cerebro del sistema, ejecutando la lógica Ladder y actualizando el HMI/gemelo digital.
+  - Recibe comandos remotos START/STOP enviados desde el dashboard de Ubidots y los expone a CODESYS como entradas Modbus (ISTS 10 y 11).
 
-- Ubidots recibe los conteos vía MQTT para visualización en la nube.
+- Gestión de hardware local:
+lee sensores físicos, ejecuta el task FreeRTOS del TCS230 y conmuta los actuadores según lo ordenado por el PLC.
 
-El flujo completo es:
+El PLC virtual en CODESYS opera como maestro Modbus TCP y constituye el cerebro del proceso, ejecutando toda la lógica Ladder, gestionando el estado del gemelo digital en la HMI y decidiendo el momento exacto para activar cada actuador. CODESYS utiliza la información del ESP32 para sincronizar el gemelo digital con el prototipo físico.
 
-Físico → ESP32 (Modbus) → CODESYS (Ladder/HMI) → ESP32 (Modbus) → Actuadores → Ubidots MQTT
+La plataforma IIoT Ubidots recibe los datos MQTT enviados por el ESP32 (contadores) para visualización en la nube y permite enviar comandos remotos START/STOP que el ESP32 traduce a señales Modbus para CODESYS.
+
+El flujo general del sistema puede resumirse como:
+
+Sensores físicos → ESP32 (Modbus ISTS) → CODESYS (Ladder + HMI) → ESP32 (Coils Modbus) → Actuadores físicos → ESP32 (MQTT Publish) → Ubidots
+
+y adicionalmente,
+
+Ubidots (MQTT comandos) → ESP32 (MQTT Subscriber) → CODESYS (Modbus ISTS).
 
 ![.](imagenesWiki/diagramabloques.png)
 
 #### 2. Diagrama de secuencia — Sincronización Modbus entre CODESYS y ESP32 
 
-El diagrama de secuencia muestra el ciclo completo de interacción entre el ESP32 (esclavo Modbus), el PLC virtual en CODESYS (maestro Modbus), los sensores físicos y los actuadores del prototipo. Representa cómo se mantiene sincronizado el sistema físico con el gemelo digital, asegurando que el estado físico y digital coincidan en todo momento
+El diagrama de secuencia representa de forma detallada la interacción completa entre los sensores físicos, el ESP32, el PLC virtual en CODESYS y la plataforma Ubidots. Este flujo describe cómo se sincronizan continuamente el prototipo físico, el gemelo digital y la capa IIoT en la nube.
 
-| Flujo                     | Origen → Destino             | Protocolo                | Función                                             |
-| ------------------------- | ---------------------------- | ------------------------ | --------------------------------------------------- |
-| Sensores → Gemelo digital | Físico → ESP32 → CODESYS     | Modbus Read Input Status | Sincroniza el estado físico con la interfaz HMI     |
-| CODESYS → Actuadores      | CODESYS → ESP32 → actuadores | Modbus Write Single Coil | Ejecuta acciones de control sobre la máquina física |
-| CODESYS → Ubidots         | CODESYS → ESP32 → Ubidots    | Modbus + MQTT            | Telemetría IIoT hacia la nube                       |
+El ESP32 actúa como puente entre el prototipo fisico y la parte digital, publicando el estado de los sensores a CODESYS mediante Modbus, ejecutando los comandos de actuadores enviados por el PLC y gestionando la comunicación bidireccional con Ubidots a través de MQTT. Por su parte, CODESYS concentra toda la lógica del proceso, actualiza el HMI y mantiene los contadores del sistema. Finalmente, Ubidots recibe datos operativos y también envía comandos remotos que influyen en el comportamiento del sistema físico.
+
+| **Flujo**                     | **Origen → Destino**                 | **Protocolo**                        | **Función**                                                                                         |
+| ----------------------------- | ------------------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| **Sensores → Gemelo Digital** | Sensores físicos → ESP32 → CODESYS   | Modbus Read Input Status (ISTS 0–11) | Sincroniza en tiempo real el estado físico (IR, color, START/STOP) con el gemelo digital en la HMI. |
+| **CODESYS → Actuadores**      | CODESYS → ESP32 → actuadores físicos | Modbus Write Single Coil             | Ejecuta las órdenes del PLC: motor, compresor y válvulas neumáticas.                                |
+| **CODESYS → Ubidots**         | CODESYS → ESP32 → Ubidots            | Modbus (HREG) + MQTT Publish         | Envia los contadores de piezas clasificadas a la nube para visualización IIoT.                      |
+| **Ubidots → CODESYS**         | Ubidots → ESP32 → CODESYS            | MQTT Subscribe + Modbus ISTS         | Transfiere comandos remotos START/STOP enviados desde la nube hacia la lógica del PLC.              |
+
+De esta forma, el flujo asegura una sincronización tri-direccional:
+
+Físico ↔ ESP32 ↔ CODESYS ↔ Actuadores
+
+y
+
+CODESYS ↔ ESP32 ↔ Ubidots
+
+permitiendo control, supervisión y comunicacion de manera completamente integrada.
 
 
 ![.](imagenesWiki/secuenciaModbus.png)
 
 #### 3. Diagrama de secuencia — Publicación MQTT
 
-El proceso de publicación MQTT en el ESP32 implementa la funcionalidad necesaria para enviar los indicadores operativos del sistema hacia la plataforma IIoT Ubidots. El microcontrolador no genera estos valores por sí mismo, sino que los obtiene directamente del PLC virtual en CODESYS mediante registros Modbus. A partir de ellos, construye un mensaje JSON y lo transmite periódicamente al broker MQTT industrial de Ubidots.
+El proceso MQTT del ESP32 establece la integración IIoT entre el sistema físico–digital y la plataforma Ubidots. Esta comunicación ahora es bidireccional, ya que el ESP32:
 
-El diagrama de secuencia representa de manera precisa este flujo, organizado en cuatro etapas principales:
+- publica los contadores provenientes de CODESYS hacia la nube, y
 
-1. Lectura de datos desde CODESYS (Modbus):
+- recibe comandos START/STOP desde el dashboard IIoT, que luego expone a CODESYS mediante Modbus.
 
-Cada 5 segundos, el ESP32 consulta los registros expuestos por CODESYS, donde se encuentran los contadores de piezas clasificadas por color (rojo, verde, azul).
-Estos registros son leídos mediante la función mb.Hreg() del servidor Modbus implementado en el ESP32.
+Esto convierte al ESP32 en una pasarela industrial–IIoT, enlazando Modbus TCP con MQTT de forma simultánea.
 
-2. Construcción del paquete JSON:
+El diagrama de secuencia representa este comportamiento en dos grandes flujos: recepción de comandos desde la nube y publicación periódica de datos hacia Ubidots.
 
-Con los valores obtenidos, el ESP32 compone un mensaje JSON en el formato requerido por Ubidots, asignando cada contador a su respectiva variable en la nube.
-Este proceso ocurre de forma local dentro del microcontrolador y no involucra comunicación externa.
 
-3. Publicación al broker MQTT de Ubidots
-El ESP32 envía el mensaje al tópico
+1. Recepción de comandos desde Ubidots (MQTT Subscriber)
+
+Ubidots envía comandos remotos mediante los tópicos:
+
+        /v1.6/devices/esp32/start_cmd/lv
+
+        /v1.6/devices/esp32/stop_cmd/lv
+
+Cuando el ESP32 recibe el mensaje:
+
+- ***mqttCallback()*** procesa el valor recibido (0 o 1).
+
+- Las variables internas ubidotsStartCmd y ubidotsStopCmd se actualizan.
+
+- El ESP32 expone estos comandos a CODESYS a través de Modbus como entradas ISTS 10 y 11.
+
+- CODESYS las lee igual que si fueran botones físicos.
+
+Este mecanismo permite que el usuario controle el proceso desde la nube, influyendo en la lógica Ladder sin comunicación directa entre Ubidots y CODESYS.
+
+
+
+2. Lectura de contadores desde CODESYS (Modbus HREG)
+
+Cada 5 segundos, el ESP32 consulta los registros "Holding Register" que CODESYS actualiza:
+
+- HREG 0 → contador rojo
+
+- HREG 1 → contador verde
+
+- HREG 2 → contador azul
+
+Estos valores se obtienen mediante:
+
+        mb.Hreg(HREG_COUNTER_ROJO);
+        mb.Hreg(HREG_COUNTER_VERDE);
+        mb.Hreg(HREG_COUNTER_AZUL);
+
+El ESP32 no calcula ni modifica contadores: simplemente lee lo que CODESYS escribe
+
+
+3. Construcción del paquete JSON
+
+Con los valores obtenidos desde los HREG, el ESP32 crea el JSON en el formato requerido por Ubidots:
+
+        {
+          "contador_rojo":  {"value": X},
+          "contador_verde": {"value": Y},
+          "contador_azul":  {"value": Z}
+        }
+
+
+
+4.Publicación de datos hacia Ubidots (MQTT Publisher)
+
+El JSON se publica al tópico:
 
           /v1.6/devices/esp32
-        
-utilizando el cliente MQTT (PubSubClient). La autenticación se realiza con el token del proyecto y la conexión se mantiene activa mediante reconexión automática en caso de fallo.
 
-4. Actualización del dashboard en la nube
-Una vez recibido por el broker industrial de Ubidots, el mensaje es procesado y los valores se reflejan en el dashboard IIoT del usuario, donde se grafican los contadores y métricas de operación del proceso físico.
+utilizando mqttClient.publish().
 
+La comunicación incluye:
+
+- autenticación mediante token del proyecto,
+
+- manejo automático de reconexión (reconnectMQTT()),
+
+- reintentos en caso de pérdida de conexión WiFi o MQTT.
+
+5. Actualización del dashboard IIoT
+
+Una vez recibido, el broker MQTT de Ubidots procesa el mensaje:
+
+- los contadores se actualizan automáticamente,
+
+- el dashboard refleja los nuevos valores en widgets y gráficos,
+
+- los datos pueden ser utilizados para alertas, reportes o análisis.
 
 ![.](imagenesWiki/mqtt.png)
 
