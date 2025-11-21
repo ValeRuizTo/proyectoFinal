@@ -848,11 +848,11 @@ Por lo tanto:
 | Componente                     | Voltaje     | Fuente principal          | Observación técnica                |
 | ------------------------------ | ----------- | ------------------------- | ---------------------------------- |
 | Compresor neumático            | 12 V        | Fuente externa 12 V       | Controlado por puente H            |
-| Motor banda transportadora     | ~9 V        | Puente H (desde 12 V)     | Señal desde ESP32 vía coil Modbus  |
-| Válvulas solenoides neumáticas | ~9 V        | Puente H (desde 12 V)     | Controladas por coils del ESP32    |
+| Motor banda transportadora     | 9 V        | Puente H (desde 12 V)     | Señal desde ESP32 vía  Modbus  |
+| Válvulas solenoides neumáticas | 9 V        | Puente H (desde 12 V)     | Controladas por coils del ESP32    |
 | Sensores infrarrojos MH        | 5 V         | Arduino (como fuente 5 V) | Tierra compartida con ESP32        |
 | Sensor de color TCS230         | 3.3 V       | ESP32                     | Lectura estable tras calibración   |
-| ESP32 (control Modbus/MQTT)    | 5 V → 3.3 V | USB / regulador interno   | Nivel lógico principal del sistema |
+| ESP32 (control Modbus/MQTT)    | 5 V - 3.3 V | USB / regulador interno   | Nivel lógico principal del sistema |
 
 
 
