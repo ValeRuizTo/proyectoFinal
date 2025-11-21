@@ -1,4 +1,4 @@
-# proyectoFinal
+# Proyecto Final Internet Industrial de las Cosas
 # Sorting Line with Color Detection
 ## Valentina Ruiz, Tomas Barrios, Darek Aljuri, Rafael Salcedo
 ## 1. Resumen General
@@ -339,7 +339,80 @@ El siguiente diagrama muestra la secuencia de operación implementada:
 #### LADDER
 
 # Descripción funcionamiento del Ladder
-## Implementación digital (codesys)
+
+## Implementación digital CODESYS y configuración Modbus
+
+La integración entre CODESYS y la ESP32 se realizó a través del protocolo **Modbus TCP**, configurando la ESP32 como *esclavo* y el PLC virtual de CODESYS como *maestro*. Para ello, dentro del proyecto se añadieron los siguientes elementos:
+
+1. **Dispositivo Ethernet**
+   Sobre este dispositivo se definió la interfaz de red que utilizaría CODESYS para comunicarse mediante Modbus TCP.
+
+2. **Cliente Modbus (Master)**
+   Dentro del dispositivo Ethernet se agregó el *Modbus TCP Client*, el cual actúa como maestro del bus.
+
+3. **Servidor Modbus (Slave)**
+   Dentro del cliente se incorporó un *Modbus Server* vinculado a la dirección IP de la ESP32.
+
+<img width="500" height="600" alt="image" src="https://github.com/user-attachments/assets/6f5722b9-8224-4900-985f-a0c097fea117" />
+
+
+
+### Definición de canales Modbus
+
+Dentro del servidor se crearon **tres canales principales**, cada uno asociado a una función específica del sistema.
+
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/d7ae989e-2722-421a-a2a4-aefb62602711" />
+
+
+
+
+### **1. Canal de lectura – “Read Multiple Registers” (Función 02)**
+
+Este canal permite leer múltiples registros provenientes de la ESP32. Su propósito es:
+
+* Obtener el estado de los **5 sensores infrarrojos**.
+* Leer los estados booleanos que indican el **color detectado**:
+
+  * Rojo
+  * Azul
+  * Blanco
+
+Este canal agrupa todas estas señales en un solo bloque de lectura periódica.
+
+### **2. Canal de escritura – “Write Multiple Registers” (Función 16)**
+
+Este canal escribe en la ESP32 los valores de los contadores correspondientes a cada color clasificado.
+
+* Función Modbus: **16 (0x10)**
+* Longitud: **3 registros**
+* Variables transmitidas:
+
+  * Contador de piezas **rojas**
+  * Contador de piezas **blancas** 
+  * Contador de piezas **azules**
+
+La ESP32 recibe estos valores y los publica vía MQTT o los procesa según la lógica programada.
+
+### **3. Canal de escritura – “Write Multiple Coils” (Función 15)**
+
+Este canal controla las salidas digitales que activan los actuadores del sistema.
+Su longitud es de **5 coils**, correspondientes a:
+
+* Motor principal
+* Compresor
+* Solenoide 1
+* Solenoide 2
+* Solenoide 3
+
+Esto permite que el PLC gestione directamente desde el ladder el encendido y apagado de cada actuador.
+
+
+### **Mapeo de variables Modbus**
+
+Finalmente, se realizó el mapeo entre los registros Modbus y las variables del programa en CODESYS. Se asignaron nombres coherentes y se emplearon exactamente esos mismos identificadores dentro del ladder para garantizar la correcta vinculación entre canal y variable.
+
+<img width="800" height="600" alt="image" src="https://github.com/user-attachments/assets/d6c38e16-cb30-496f-a46f-d58e0d9d33e3" />
+
 
 
 
