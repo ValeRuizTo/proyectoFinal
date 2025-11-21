@@ -101,7 +101,7 @@ Sensores físicos → ESP32 (Modbus ISTS) → CODESYS (Ladder + HMI) → ESP32 (
 
 y adicionalmente,
 
-Ubidots (MQTT comandos) → ESP32 (MQTT Subscriber) → CODESYS (Modbus ISTS).
+Ubidots (MQTT comandos) → ESP32 (MQTT Subscriber) → CODESYS (Modbus ISTS). [8] *redactado con IA*
 
 ![.](imagenesWiki/diagramabloques.png)
 
@@ -363,22 +363,26 @@ El diseño del prototipo de Sorting Line with Color Detection se fundamenta en l
 
 - El código y los esquemáticos deben estar completamente documentados para garantizar mantenibilidad.
 
-### Variables Generales del Sistema
-| Name      | Attrib  | Type  | Comment                                                                |
-|-----------|---------|-------|------------------------------------------------------------------------|
-| Input0_0  | [Input] | BOOL  | Sensor F1 — Detecta llegada pieza (activa banda M1 y motor válvula M2) |
-| Input0_1  | [Input] | BOOL  | Detector de color C1 — Blanco                                          |
-| Input0_2  | [Input] | BOOL  | Detector de color C2 — Rojo                                            |
-| Input0_3  | [Input] | BOOL  | Detector de color C3 — Azul                                            |
-| Input0_4  | [Input] | BOOL  | Sensor F2 — Zona temporizado (dispara el timer seleccionado por color) |
-| Input0_5  | [Input] | BOOL  | Sensor F3 — Llegada a salida/estación 1 (posición V1)                  |
-| Input0_6  | [Input] | BOOL  | Sensor F4 — Llegada a salida/estación 2 (posición V2)                  |
-| Input0_7  | [Input] | BOOL  | Sensor F5 — Llegada a salida/estación 3 (posición V3)                  |
-| Input0_8  | [Input] | BOOL  | START — Pulsador de inicio (habilita ciclo)                            |
-| Input0_9  | [Input] | BOOL  | STOP — Pulsador de paro (paro de emergencia / detención)               |
-| Output0_0 | [Output]| BOOL  | Motor M1 — Banda transportadora (arranque/parada)                      |
-| Output0_1 | [Output]| BOOL  | Motor M2 — Motor de la válvula (o alimentador de válvulas)             |
-| Output0_2 | [Output]| BOOL  | V1 — Solenoide / válvula para piezas blancas                           |
+### Variables Generales del Sistema| Nombre        | Tipo   | Dirección | Uso en el sistema                                                  |
+| ------------- | ------ | --------- | ------------------------------------------------------------------ |
+| **Input0_0**  | Input  | ISTS 0    | Sensor F1 — Detector de entrada (pieza ingresa al sistema)         |
+| **Input0_1**  | Input  | ISTS 1    | Sensor F2 — Detector intermedio                                    |
+| **Input0_2**  | Input  | ISTS 2    | Sensor F3 — Detector de llegada zona de expulsión 1                |
+| **Input0_3**  | Input  | ISTS 3    | Sensor F4 — Detector de llegada zona de expulsión 2                |
+| **Input0_4**  | Input  | ISTS 4    | Sensor F5 — Detector de llegada zona de expulsión 3                |
+| **Input0_5**  | Input  | ISTS 5    | Flag de color ROJO detectado por el ESP32 (TCS230 + FreeRTOS task) |
+| **Input0_6**  | Input  | ISTS 6    | Flag de color BLANCO (siempre 0 en el firmware actual)             |
+| **Input0_7**  | Input  | ISTS 7    | Flag de color AZUL detectado por ESP32                             |
+| **Input0_8**  | Input  | ISTS 8    | START físico (botón conectado al ESP32)                            |
+| **Input0_9**  | Input  | ISTS 9    | STOP físico (botón conectado al ESP32)                             |
+| **Input0_10** | Input  | ISTS 10   | START desde Ubidots (comando MQTT → ESP32 → Modbus)                |
+| **Input0_11** | Input  | ISTS 11   | STOP desde Ubidots (comando MQTT → ESP32 → Modbus)                 |
+| **Output0_0** | Output | COIL 0    | Motor M1 — Banda transportadora (controlado por CODESYS vía ESP32) |
+| **Output0_1** | Output | COIL 1    | Motor M2 — Compresor / motor auxiliar de válvulas                  |
+| **Output0_2** | Output | COIL 2    | V1 — Válvula solenoide estación 1                                  |
+| **Output0_3** | Output | COIL 3    | V2 — Válvula solenoide estación 2                                  |
+| **Output0_4** | Output | COIL 4    | V3 — Válvula solenoide estación 3                                  |
+
 
 ### Diagrama de función secuencial
 
@@ -782,9 +786,6 @@ Finalmente, se realizó el mapeo entre los registros Modbus y las variables del 
 ![.](imagenesWiki/code3.png)
 
 
-
-
-
 En la imagen se muestra el prototipo completo de la máquina clasificadora de piezas por color, montado con el kit Fischertechnik Sorting Line with Color Detection. El sistema incluye la banda transportadora, la cámara de detección (caja de carton), los cilindros neumáticos que desvían las piezas hacia los compartimientos y los sensores de presencia y clasificación.
 En la cámara de detección (caja de carton) se encuentra el sensor de color, encargado de identificar la tonalidad de cada ficha. 
 
@@ -795,7 +796,6 @@ Debido a que los sensores fotoresistivos originales no funcionaban correctamente
 
 
 El montaje incluye además el cableado eléctrico de prueba y las conexiones neumáticas de las válvulas y todos los sensores
-
 
 
 
@@ -921,6 +921,130 @@ Se realizaron secuencias completas:
  ![.](imagenesWiki/code2.png)
 
 
+
+## Resultados
+
+1. Comunicación Modbus TCP estable entre CODESYS y ESP32
+
+El ESP32 expuso correctamente todas las entradas digitales (sensores), flags de color y comandos START/STOP.
+
+CODESYS leyó los Input Status y escribió Coils sin latencias apreciables.
+
+No se presentaron pérdidas de paquetes ni desincronización durante el funcionamiento continuo.
+
+2. Lectura confiable de sensores físicos
+
+Los fototransistores MH instalados respondieron de forma precisa tras corregir la interferencia por luz ambiente.
+
+Se validaron exitosamente los sensores:
+
+- F1: entrada
+
+- F2: temporización
+
+- F3-F5: llegada a estaciones
+
+La lectura digital en el ESP32 mostró estabilidad sin falsos positivos.
+
+3. Detección de color confiable con el TCS230
+
+La calibración automática mediante FreeRTOS funcionó correctamente.
+
+ROJO, AZUL y BLANCO se actualizaron en tiempo real.
+
+La decisión por color coincidió con los valores esperados en pruebas físicas.
+
+4. Accionamiento correcto de actuadores
+
+Las válvulas neumáticas V1, V2 y V3 respondieron inmediatamente a los comandos del PLC.
+
+La banda transportadora y el motor auxiliar M2 se activaron sin interrupciones.
+
+La clasificación física coincidió con el color detectado.
+
+5. Sincronización precisa entre sensores, PLC y actuadores
+
+Las temporizaciones (timers T1–T3) se ejecutaron correctamente según el color detectado.
+
+No hubo errores de secuencia ni activaciones incorrectas.
+
+6. Publicación MQTT exitosa hacia Ubidots
+
+Cada 5 segundos, el ESP32 envió los contadores de piezas (rojo, verde, azul).
+
+El dashboard IIoT reflejó los datos en tiempo real sin pérdidas ni reconexiones inesperadas.
+
+7. Pruebas completas de operación
+
+Se probó el inicio del proceso desde:
+
+- el HMI en CODESYS
+
+- el pulsador físico START
+
+- un sensor real detectando entrada
+
+En todos los casos, la máquina ejecutó el ciclo completo de clasificación sin fallas.
+
+
+## Analisis
+
+El desempeño del sistema mostró un alto grado de sincronización entre los elementos físicos y digitales, lo cual es fundamental en un entorno IIoT con gemelo digital.
+
+1. Precisión y estabilidad en la capa física
+
+Al el sensore de color en una caja de color negro adentro y carton afuera, logramos reducir la mayor cantidad posible de interferencia de luz y su desempeño de volvio muy estable
+
+
+2. Ventajas del uso de Modbus TCP
+
+Permitió unificar toda la comunicación entre ESP32 y CODESYS.
+
+La lectura de estados y escritura de se integró perfectamente con la lógica Ladder.
+
+3. Uso de hilos
+
+FreeRTOS manejando el sensor de color en paralelo evitó bloqueos.
+
+El loop principal quedó libre para Modbus + MQTT + lógica de sincronización.
+
+
+4. Validación exhaustiva
+
+Se probaron sensores uno a uno, válvulas una a una, timers por color, ciclo completo varias veces, arranques físicos y digitales, comunicacion con Ubidots y todo esto permitio asegurar que la integración no solo funcionaba de manera aislada, sino también como sistema completo interconectado.
+
+
+## Conclusiones
+
+
+- El sistema físico–digital operó de manera satisfactoria, logrando sincronización total entre el prototipo Fischertechnik, el PLC virtual en CODESYS, el ESP32 y la plataforma IIoT Ubidots.
+
+- La arquitectura basada en Modbus TCP + MQTT + FreeRTOS demostró ser robusta, modular y confiable para aplicaciones de automatización y gemelo digital.
+
+- La calibración dinámica del sensor TCS230 permitió una detección de color precisa, incluso con variaciones de iluminación.
+
+- La sustitución y correcta adaptación de los fototransistores MH permitió garantizar detección estable de piezas, resolviendo problemas previos de interferencia lumínica y sensores quemados.
+
+- La lógica de CODESYS controló el sistema de forma efectiva, ejecutando los temporizadores según el color y accionando correctamente los cilindros neumáticos.
+
+- La publicación MQTT permitió monitoreo en la nube en tiempo real, habilitando métricas de producción y trazabilidad del proceso.
+
+- Las pruebas combinadas (manuales, automáticas, físicas y de gemelo digital) confirmaron que el sistema es funcional, seguro, estable y repetible, cumpliendo plenamente los objetivos del proyecto.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## Conclusiones
 
 -  La implementación del gemelo digital en CODESYS permitió simular el comportamiento completo del sistema de clasificación, validando la lógica de control en un entorno virtual antes de llevarla al prototipo físico.
@@ -952,6 +1076,527 @@ Se realizaron secuencias completas:
 
 [5] ISO/IEC/IEEE, ISO/IEC/IEEE 29148:2018 Systems and software engineering — Life cycle processes — Requirements engineering, 2nd ed. Geneva, Switzerland: International Organization for Standardization, Nov. 2018. [Online]. Available: https://www.iso.org/standard/72089.html
 
+
 [6] “IEC 61131-3 Protocol Overview,” Real Time Automation, Inc., [En línea]. Disponible: https://www.rtautomation.com/technologies/control-iec-61131-3/
 
 [7] Shao, G., Frechette, S., y Srinivasan, V., “An Analysis of the New ISO 23247 Series of Standards on Digital Twin Framework for Manufacturing,” en Proceedings of the 2023 MSEC Manufacturing Science & Engineering Conference, New Brunswick, NJ, USA, 12-16 jun. 2023. Disponible en: https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=935765
+
+[8] OpenAI, "ChatGPT (Nov 2025 version)," OpenAI, San Francisco, CA, 2025. Accessed: Nov. 20, 2025. [Online]. 
+
+
+## 7. anexos
+
+### Codigo Esp32
+
+                  
+                      ESP32_ModbusTCP_WiFi_Ubidots + TCS230 (multihilo FreeRTOS)
+                      -----------------------------------------------------------
+                      - ESP32 = Esclavo Modbus TCP + cliente MQTT Ubidots
+                      - CODESYS = Maestro Modbus TCP, toda la lógica (START/STOP) en ladder
+                    
+                      MAPEO MODBUS (Input Status / ISTS):
+                        0..4  -> 5 sensores infrarrojos físicos (GPIO 18,19,21,22,23)
+                        5     -> Flag color ROJO (desde TCS230)
+                        6     -> Flag color BLANCO (no usado, siempre 0)
+                        7     -> Flag color AZUL  (desde TCS230)
+                        8     -> Botón físico START  (PIN_START_FISICO)
+                        9     -> Botón físico STOP   (PIN_STOP_FISICO)
+                        10    -> Comando START desde Ubidots  (variable start_cmd)
+                        11    -> Comando STOP  desde Ubidots  (variable stop_cmd)
+                    
+                      MAPEO MODBUS (Holding Registers / HREG):
+                        0     -> contador rojo   (WORD desde CODESYS)
+                        1     -> contador verde  (WORD desde CODESYS)
+                        2     -> contador azul   (WORD desde CODESYS)
+                    
+                      MAPEO MODBUS (Coils):
+                        0..4  -> Motor, compresor y 3 válvulas (CODESYS escribe, ESP32 conmuta GPIO)
+                    
+                      NOTA:
+                      - ESP32 solo expone señales (sensores, botones, Ubidots) hacia CODESYS.
+                      - Toda la decisión de cuándo parar/arrancar está en el ladder.
+                    **********************************************************************/
+                    
+                    #include <WiFi.h>
+                    #include <ModbusIP_ESP8266.h>   // También funciona en ESP32
+                    #include <PubSubClient.h>
+                    
+                    // ====================== CONFIG WIFI ======================
+                    const char* WIFI_SSID     = "Rafa";
+                    const char* WIFI_PASSWORD = "rafa12345";
+                    
+                    // ====================== CONFIG UBIDOTS ===================
+                    const char* MQTT_BROKER   = "industrial.api.ubidots.com";
+                    const int   MQTT_PORT     = 1883;
+                    const char* UBIDOTS_TOKEN = "BBUS-GKYhgb5YytH3Fq4eaLXAQezK7DXYwW";
+                    
+                    // Device y variables en Ubidots
+                    const char* DEVICE_LABEL        = "esp32";
+                    const char* VAR_LABEL_ROJO      = "contador_rojo";
+                    const char* VAR_LABEL_VERDE     = "contador_verde";
+                    const char* VAR_LABEL_AZUL      = "contador_azul";
+                    const char* VAR_LABEL_START_CMD = "start_cmd";   // bool en Ubidots
+                    const char* VAR_LABEL_STOP_CMD  = "stop_cmd";    // bool en Ubidots
+                    
+                    // ====================== MODBUS CONFIG ====================
+                    // Entradas discretas físicas (IR, etc.)
+                    const int DiscreteInputPins[]       = {18, 19, 21, 22, 23};
+                    const int DiscreteInputsAddresses[] = {0,  1,  2,  3,  4};
+                    
+                    // Holding registers para contadores (vienen de CODESYS como WORD)
+                    const uint16_t HREG_COUNTER_ROJO  = 0;   // Offset 0
+                    const uint16_t HREG_COUNTER_VERDE = 1;   // Offset 1
+                    const uint16_t HREG_COUNTER_AZUL  = 2;   // Offset 2
+                    
+                    // Entradas discretas lógicas para el color (no tienen pin físico)
+                    const uint16_t ISTS_COLOR_ROJO   = 5;
+                    const uint16_t ISTS_COLOR_BLANCO = 6;  // siempre 0
+                    const uint16_t ISTS_COLOR_AZUL   = 7;
+                    
+                    // Entradas discretas para START/STOP físico y Ubidots
+                    const uint16_t ISTS_START_FISICO  = 8;
+                    const uint16_t ISTS_STOP_FISICO   = 9;
+                    const uint16_t ISTS_START_UBIDOTS = 10;
+                    const uint16_t ISTS_STOP_UBIDOTS  = 11;
+                    
+                    // Coils físicos (salidas controladas por CODESYS)
+                    const int CoilsPins[]      = {2, 25, 26, 32, 33};
+                    const int CoilsAddresses[] = {0, 1, 2, 3, 4};   // motor, compresor, válvulas
+                    
+                    // ====================== TCS230 CONFIG ====================
+                    // Pines del sensor de color
+                    #define TCS_S0      4
+                    #define TCS_S1      5
+                    #define TCS_S2      14
+                    #define TCS_S3      27
+                    #define TCS_OUT_PIN 34   // solo entrada
+                    
+                    // Botones físicos START/STOP (ajusta los GPIO según tu cableado)
+                    const int PIN_START_FISICO = 16;
+                    const int PIN_STOP_FISICO  = 17;
+                    
+                    // ====================== ESTRUCTURAS Y ESTADO ============
+                    
+                    struct ColorReading {
+                      unsigned long r;  // canal rojo
+                      unsigned long b;  // canal azul
+                      unsigned long w;  // canal clear (blanco) — solo informativo
+                    };
+                    
+                    // Variables globales para el color (compartidas con FreeRTOS task)
+                    volatile bool gIsRojo   = false;
+                    volatile bool gIsAzul   = false;
+                    volatile bool gIsBlanco = false;
+                    
+                    // Calibración
+                    volatile bool gCalibracionLista = false;
+                    volatile unsigned long gBaseR = 0;
+                    volatile unsigned long gBaseB = 0;
+                    
+                    // Umbrales de incremento respecto a la base
+                    const long DELTA_UMBRAL_ROJO = 400;
+                    const long DELTA_UMBRAL_AZUL = 400;
+                    
+                    // Mutex para proteger acceso a gIsRojo / gIsAzul / gIsBlanco
+                    SemaphoreHandle_t colorMutex = NULL;
+                    
+                    // Comandos remotos desde Ubidots (START/STOP)
+                    volatile bool ubidotsStartCmd = false;
+                    volatile bool ubidotsStopCmd  = false;
+                    
+                    // ====================== OBJETOS GLOBALES =================
+                    ModbusIP mb;                    // Servidor Modbus TCP
+                    WiFiClient wifiClient;          // Cliente TCP para MQTT
+                    PubSubClient mqttClient(wifiClient);
+                    
+                    // Publicación periódica a Ubidots
+                    unsigned long lastPublish = 0;
+                    const unsigned long PUBLISH_INTERVAL_MS = 5000; // 5 s
+                    
+                    // ====================== FORWARD DECLARATIONS =============
+                    void mqttCallback(char* topic, byte* payload, unsigned int length);
+                    
+                    // ====================== MQTT: PUBLICACIÓN CONTADORES =====
+                    
+                    void publishCountersToUbidots() {
+                      // Leer WORDs desde los holding registers Modbus
+                      uint16_t cRojoW  = mb.Hreg(HREG_COUNTER_ROJO);
+                      uint16_t cVerdeW = mb.Hreg(HREG_COUNTER_VERDE);
+                      uint16_t cAzulW  = mb.Hreg(HREG_COUNTER_AZUL);
+                    
+                      int cRojo  = (int)cRojoW;
+                      int cVerde = (int)cVerdeW;
+                      int cAzul  = (int)cAzulW;
+                    
+                      // Topic Ubidots
+                      String topic = String("/v1.6/devices/") + DEVICE_LABEL;
+                    
+                      // Payload JSON con las 3 variables
+                      String payload = "{";
+                      payload += "\"" + String(VAR_LABEL_ROJO)  + "\": {\"value\":" + String(cRojo)  + "},";
+                      payload += "\"" + String(VAR_LABEL_VERDE) + "\": {\"value\":" + String(cVerde) + "},";
+                      payload += "\"" + String(VAR_LABEL_AZUL)  + "\": {\"value\":" + String(cAzul)  + "}";
+                      payload += "}";
+                    
+                      Serial.println("------------------------------------------------");
+                      Serial.println("Publicando en Ubidots:");
+                      Serial.print("Topic:   ");
+                      Serial.println(topic);
+                      Serial.print("Payload: ");
+                      Serial.println(payload);
+                      Serial.println("------------------------------------------------");
+                    
+                      mqttClient.publish(topic.c_str(), payload.c_str());
+                    }
+                    
+                    // ====================== MQTT: CONEXIÓN Y SUBSCRIPCIÓN ====
+                    
+                    void reconnectMQTT() {
+                      while (!mqttClient.connected()) {
+                        Serial.print("Conectando a MQTT Ubidots... ");
+                        // clientID arbitrario, user = token, pass = ""
+                        if (mqttClient.connect("ESP32-Ubidots", UBIDOTS_TOKEN, "")) {
+                          Serial.println("conectado.");
+                    
+                          // Suscribirse a los comandos START/STOP desde Ubidots
+                          String tStart = String("/v1.6/devices/") + DEVICE_LABEL + "/" + VAR_LABEL_START_CMD + "/lv";
+                          String tStop  = String("/v1.6/devices/") + DEVICE_LABEL + "/" + VAR_LABEL_STOP_CMD  + "/lv";
+                    
+                          mqttClient.subscribe(tStart.c_str());
+                          mqttClient.subscribe(tStop.c_str());
+                    
+                          Serial.println("Suscrito a:");
+                          Serial.println(tStart);
+                          Serial.println(tStop);
+                        } else {
+                          Serial.print("falló, rc=");
+                          Serial.print(mqttClient.state());
+                          Serial.println(" -> reintento en 2s");
+                          delay(2000);
+                        }
+                      }
+                    }
+                    
+                    // Callback que procesa mensajes MQTT desde Ubidots
+                    void mqttCallback(char* topic, byte* payload, unsigned int length) {
+                      String msg;
+                      for (unsigned int i = 0; i < length; i++) {
+                        msg += (char)payload[i];
+                      }
+                      msg.trim();
+                    
+                      int value = msg.toInt();     // Ubidots /lv envía solo el valor (ej. "0" o "1")
+                      bool bit = (value != 0);
+                    
+                      String t(topic);
+                      Serial.print("[MQTT] Topic: ");
+                      Serial.print(t);
+                      Serial.print("  Payload: ");
+                      Serial.println(msg);
+                    
+                      // Detectar si el topic pertenece a start_cmd o stop_cmd
+                      if (t.indexOf(String("/") + VAR_LABEL_START_CMD + "/") != -1) {
+                        ubidotsStartCmd = bit;
+                        Serial.print("[MQTT] ubidotsStartCmd = ");
+                        Serial.println(ubidotsStartCmd);
+                      } else if (t.indexOf(String("/") + VAR_LABEL_STOP_CMD + "/") != -1) {
+                        ubidotsStopCmd = bit;
+                        Serial.print("[MQTT] ubidotsStopCmd = ");
+                        Serial.println(ubidotsStopCmd);
+                      }
+                    }
+                    
+                    // ====================== TCS230: LECTURA COLOR ============
+                    void setupTCS230() {
+                      pinMode(TCS_S0, OUTPUT);
+                      pinMode(TCS_S1, OUTPUT);
+                      pinMode(TCS_S2, OUTPUT);
+                      pinMode(TCS_S3, OUTPUT);
+                      pinMode(TCS_OUT_PIN, INPUT);
+                    
+                      // Escala de frecuencia: 20%
+                      digitalWrite(TCS_S0, HIGH);
+                      digitalWrite(TCS_S1, LOW);
+                    }
+                    
+                    // Lee la frecuencia (Hz aprox.) para una configuración S2/S3
+                    unsigned long tcsReadFrequency(byte s2, byte s3) {
+                      digitalWrite(TCS_S2, s2);
+                      digitalWrite(TCS_S3, s3);
+                      delay(20); // estabilizar
+                    
+                      unsigned long pulseWidth = pulseIn(TCS_OUT_PIN, LOW, 100000); // 100 ms timeout
+                      if (pulseWidth == 0) return 0;
+                      return 1000000UL / pulseWidth;
+                    }
+                    
+                    // Promedia varias lecturas para estabilidad
+                    unsigned long tcsReadAveraged(byte s2, byte s3, byte samples = 5) {
+                      unsigned long sum = 0;
+                      byte valid = 0;
+                      for (byte i = 0; i < samples; i++) {
+                        unsigned long f = tcsReadFrequency(s2, s3);
+                        if (f > 0) {
+                          sum += f;
+                          valid++;
+                        }
+                        delay(5);
+                      }
+                      if (valid == 0) return 0;
+                      return sum / valid;
+                    }
+                    
+                    // ROJO:   S2=0, S3=0
+                    // AZUL:   S2=0, S3=1
+                    // CLEAR:  S2=1, S3=0
+                    ColorReading tcsReadColor() {
+                      ColorReading c;
+                      c.r = tcsReadAveraged(LOW, LOW);    // rojo
+                      c.b = tcsReadAveraged(LOW, HIGH);   // azul
+                      c.w = tcsReadAveraged(HIGH, LOW);   // clear/blanco (solo informativo)
+                      return c;
+                    }
+                    
+                    // ============ TASK FreeRTOS para TCS230 (core separado) ============
+                    
+                    void taskColorSensor(void* parameter) {
+                      (void) parameter;
+                    
+                      // Variables locales de calibración
+                      bool calibIniciada = false;
+                      unsigned long tInicioCalib = 0;
+                      const unsigned long TIEMPO_CALIB_MS = 3000;
+                    
+                      unsigned long sumaR = 0;
+                      unsigned long sumaB = 0;
+                      unsigned long nMuestras = 0;
+                    
+                      for (;;) {
+                        ColorReading c = tcsReadColor();
+                    
+                        // Fase de calibración (primeros ~3 s)
+                        if (!gCalibracionLista) {
+                          if (!calibIniciada) {
+                            calibIniciada = true;
+                            tInicioCalib = millis();
+                            sumaR = 0;
+                            sumaB = 0;
+                            nMuestras = 0;
+                            Serial.println("[CALIB] Iniciando calibración de R y B (3 s)...");
+                          }
+                    
+                          sumaR += c.r;
+                          sumaB += c.b;
+                          nMuestras++;
+                    
+                          if (millis() - tInicioCalib >= TIEMPO_CALIB_MS) {
+                            if (nMuestras > 0) {
+                              gBaseR = sumaR / nMuestras;
+                              gBaseB = sumaB / nMuestras;
+                            } else {
+                              gBaseR = 0;
+                              gBaseB = 0;
+                            }
+                    
+                            gCalibracionLista = true;
+                    
+                            Serial.println("[CALIB] Finalizada.");
+                            Serial.print("[CALIB] gBaseR = ");
+                            Serial.println(gBaseR);
+                            Serial.print("[CALIB] gBaseB = ");
+                            Serial.println(gBaseB);
+                          }
+                    
+                        } else {
+                          // Fase normal: decidir si hay rojo/azul según incremento respecto a la base
+                          long deltaR = (long)c.r - (long)gBaseR;
+                          long deltaB = (long)c.b - (long)gBaseB;
+                    
+                          bool localRojo = (deltaR > DELTA_UMBRAL_ROJO);
+                          bool localAzul = (deltaB > DELTA_UMBRAL_AZUL);
+                    
+                          // ---- Sección crítica protegida por mutex ----
+                          if (colorMutex != NULL && xSemaphoreTake(colorMutex, portMAX_DELAY) == pdTRUE) {
+                            gIsRojo   = localRojo;
+                            gIsAzul   = localAzul;
+                            gIsBlanco = false;  // blanco siempre apagado
+                            xSemaphoreGive(colorMutex);
+                          } else {
+                            // Fallback sin mutex (no ideal, pero evita quedarse sin actualizar)
+                            gIsRojo   = localRojo;
+                            gIsAzul   = localAzul;
+                            gIsBlanco = false;
+                          }
+                    
+                          // Debug opcional
+                          Serial.print("[COLOR] R:");
+                          Serial.print(c.r);
+                          Serial.print(" (base ");
+                          Serial.print(gBaseR);
+                          Serial.print(", delta ");
+                          Serial.print(deltaR);
+                          Serial.print(")  B:");
+                          Serial.print(c.b);
+                          Serial.print(" (base ");
+                          Serial.print(gBaseB);
+                          Serial.print(", delta ");
+                          Serial.print(deltaB);
+                          Serial.print(")  | Flags -> R:");
+                          Serial.print(localRojo);
+                          Serial.print(" A:");
+                          Serial.println(localAzul);
+                        }
+                    
+                        // Lee color aprox cada 200 ms (ajusta si quieres)
+                        vTaskDelay(pdMS_TO_TICKS(200));
+                      }
+                    }
+                    
+                    // ====================== SETUP ============================
+                    
+                    void setup() {
+                      Serial.begin(115200);
+                    
+                      // --- Crear mutex para las variables de color ---
+                      colorMutex = xSemaphoreCreateMutex();
+                      if (colorMutex == NULL) {
+                        Serial.println("ERROR: No se pudo crear colorMutex.");
+                      }
+                    
+                      // --- Entradas discretas físicas (sensores IR) ---
+                      for (int i = 0; i < (int)(sizeof(DiscreteInputPins) / sizeof(DiscreteInputPins[0])); i++) {
+                        pinMode(DiscreteInputPins[i], INPUT);
+                        mb.addIsts(DiscreteInputsAddresses[i]);
+                      }
+                    
+                      // --- Coils físicos (salidas) ---
+                      for (int i = 0; i < (int)(sizeof(CoilsPins) / sizeof(CoilsPins[0])); i++) {
+                        pinMode(CoilsPins[i], OUTPUT);
+                        digitalWrite(CoilsPins[i], LOW);
+                        mb.addCoil(CoilsAddresses[i]);
+                      }
+                    
+                      // --- Holding registers ---
+                      mb.addHreg(HREG_COUNTER_ROJO,  0);
+                      mb.addHreg(HREG_COUNTER_VERDE, 0);
+                      mb.addHreg(HREG_COUNTER_AZUL,  0);
+                    
+                      // --- Entradas discretas de color ---
+                      mb.addIsts(ISTS_COLOR_ROJO);
+                      mb.addIsts(ISTS_COLOR_BLANCO);
+                      mb.addIsts(ISTS_COLOR_AZUL);
+                    
+                      // --- Entradas discretas START/STOP físico ---
+                      pinMode(PIN_START_FISICO, INPUT);  // ajusta a INPUT_PULLUP si usas pulsadores a GND
+                      pinMode(PIN_STOP_FISICO,  INPUT);
+                      mb.addIsts(ISTS_START_FISICO);
+                      mb.addIsts(ISTS_STOP_FISICO);
+                    
+                      // --- Entradas discretas START/STOP desde Ubidots ---
+                      mb.addIsts(ISTS_START_UBIDOTS);
+                      mb.addIsts(ISTS_STOP_UBIDOTS);
+                    
+                      // --- TCS230 ---
+                      setupTCS230();
+                    
+                      // --- WiFi ---
+                      WiFi.mode(WIFI_STA);
+                      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+                      Serial.print("Conectando a WiFi");
+                      int attempts = 0;
+                      while (WiFi.status() != WL_CONNECTED && attempts < 30) {
+                        delay(500);
+                        Serial.print(".");
+                        attempts++;
+                      }
+                      if (WiFi.status() == WL_CONNECTED) {
+                        Serial.println("\nWiFi conectado!");
+                        Serial.print("IP: ");
+                        Serial.println(WiFi.localIP());
+                      } else {
+                        Serial.println("\nNo se pudo conectar a WiFi.");
+                      }
+                    
+                      // --- Modbus TCP servidor ---
+                      mb.server();
+                      Serial.println("Servidor Modbus TCP iniciado.");
+                    
+                      // --- MQTT ---
+                      mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
+                      mqttClient.setCallback(mqttCallback);
+                    
+                      // --- Crear task FreeRTOS para el sensor de color ---
+                      xTaskCreatePinnedToCore(
+                        taskColorSensor,   // función
+                        "ColorSensorTask", // nombre
+                        4096,              // stack depth
+                        NULL,              // parámetro
+                        1,                 // prioridad
+                        NULL,              // handle
+                        0                  // core 0
+                      );
+                    }
+                    
+                    // ====================== LOOP =============================
+                    
+                    void loop() {
+                      // Atender pila Modbus
+                      mb.task();
+                    
+                      // Entradas discretas físicas -> Modbus (sensores IR)
+                      for (int i = 0; i < (int)(sizeof(DiscreteInputsAddresses) / sizeof(DiscreteInputsAddresses[0])); i++) {
+                        bool val = digitalRead(DiscreteInputPins[i]);
+                        mb.Ists(DiscreteInputsAddresses[i], val);
+                      }
+                    
+                      // ---- Lectura de flags de color protegida por mutex ----
+                      bool rojo, blanco, azul;
+                      if (colorMutex != NULL && xSemaphoreTake(colorMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+                        rojo   = gIsRojo;
+                        blanco = gIsBlanco;
+                        azul   = gIsAzul;
+                        xSemaphoreGive(colorMutex);
+                      } else {
+                        // en caso de no poder tomar el mutex, leer directamente
+                        rojo   = gIsRojo;
+                        blanco = gIsBlanco;
+                        azul   = gIsAzul;
+                      }
+                    
+                      // Flags de color -> Modbus
+                      mb.Ists(ISTS_COLOR_ROJO,   rojo);
+                      mb.Ists(ISTS_COLOR_BLANCO, false);   // blanco siempre 0 en la lógica actual
+                      mb.Ists(ISTS_COLOR_AZUL,   azul);
+                    
+                      // --- Botones físicos START/STOP -> Modbus ---
+                      bool startFisico = digitalRead(PIN_START_FISICO);
+                      bool stopFisico  = digitalRead(PIN_STOP_FISICO);
+                      mb.Ists(ISTS_START_FISICO,  startFisico);
+                      mb.Ists(ISTS_STOP_FISICO,   stopFisico);
+                    
+                      // --- Comandos START/STOP desde Ubidots -> Modbus ---
+                      mb.Ists(ISTS_START_UBIDOTS, ubidotsStartCmd);
+                      mb.Ists(ISTS_STOP_UBIDOTS,  ubidotsStopCmd);
+                    
+                      // --- Coils Modbus -> salidas físicas (CODESYS manda) ---
+                      for (int i = 0; i < (int)(sizeof(CoilsAddresses) / sizeof(CoilsAddresses[0])); i++) {
+                        bool coilVal = mb.Coil(CoilsAddresses[i]);
+                        digitalWrite(CoilsPins[i], coilVal ? HIGH : LOW);
+                      }
+                    
+                      // --- MQTT ---
+                      if (!mqttClient.connected()) {
+                        reconnectMQTT();
+                      }
+                      mqttClient.loop();
+                    
+                      // Publicación periódica Ubidots (contadores que vienen de CODESYS)
+                      unsigned long now = millis();
+                      if (now - lastPublish >= PUBLISH_INTERVAL_MS) {
+                        lastPublish = now;
+                        publishCountersToUbidots();
+                      }
+                    
+                      // Pequeño respiro al scheduler
+                      delay(10);
+                    }
