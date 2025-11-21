@@ -630,18 +630,75 @@ publishCountersToUbidots();// Cada 5 segundos
 
 
 
-
-
+## Descripción funcionamiento del Ladder
 
 ### Programación Ladder
 
-### 2.3 Definición de Variables para la implementación ladder
+El programa Ladder desarrollado en CODESYS mantiene en esta entrega la misma estructura funcional presentada anteriormente (ver documentación original en:  
+https://github.com/ValeRuizTo/proyecto2corte).  
 
-#### LADDER
+Sin embargo, debido a la integración con la ESP32 mediante Modbus TCP y la incorporación de control dual (físico + remoto), se realizaron ajustes importantes en tres áreas:
 
-# Descripción funcionamiento del Ladder
+1. Manejo unificado del **START/STOP**  
+2. Actualización del comportamiento de los **sensores infrarrojos**  
+3. Ajuste del mapeo de nombres para coincidir con las nuevas direcciones Modbus  
 
-## Implementación digital CODESYS y configuración Modbus
+
+
+#### 1. Actualización del control START/STOP
+
+El sistema ahora integra tres fuentes distintas para el arranque y detención del proceso:
+
+- **Start/Stop desde el HMI de CODESYS** (operación local en software)  
+- **Start/Stop físico** conectados a la ESP32  
+- **Start/Stop desde Ubidots** recibidos vía MQTT y expuestos a CODESYS como `Ists 10` y `Ists 11`
+
+Para unificar estas señales, en el Ladder se implementó una red lógica basada en una operación de **OR** entre las tres fuentes para formar la señal final de inicio (`START_GLOBAL`) y una combinación equivalente para la detención (`STOP_GLOBAL`).
+
+
+<img width="800" height="200" alt="image" src="https://github.com/user-attachments/assets/5eebefdc-b287-414e-8610-f6ccacfefd9a" />
+
+
+#### 2. Modificación del comportamiento de los sensores infrarrojos
+
+Los sensores infrarrojos físicos conectados a la ESP32 trabajan con lógica inversa:  
+- Su estado normal es **1** (sin objeto)  
+- Al detectar un objeto pasan a **0**
+
+Para que la lógica del Ladder reflejara este comportamiento real del hardware, los contactos asociados a los sensores IR fueron configurados como **negados** (`NOT`) dentro del programa Ladder.
+
+Esto permite que la detección se exprese en forma positiva dentro del diagrama (contacto cerrado al detectar), simplificando la lectura de la lógica y evitando confusiones con la polaridad física.
+
+
+<img width="800" height="200" alt="image" src="https://github.com/user-attachments/assets/2101a440-2088-46eb-92e8-a608142f5f8c" />
+
+
+#### 3. Actualización del mapeo de variables Modbus
+
+Dado que las señales provenientes de la ESP32 incluyen nuevas entradas (START/STOP físico, START/STOP IoT, detección de color, IR, etc.), se revisó el programa Ladder para asegurar que todas las variables utilizadas en rungs estuvieran correctamente asociadas a los nombres definidos en el mapeo Modbus.
+
+Si bien esto no modifica la funcionalidad del control, garantiza coherencia y facilita el mantenimiento del sistema.  
+Ejemplos de entradas actualizadas:
+
+- `IR_1`, `IR_2`, … → enlazadas a `Ists 0–4`  
+- `COLOR_ROJO`, `COLOR_AZUL` → enlazadas a `Ists 5 y 7`  
+- `START_FISICO`, `STOP_FISICO` → `Ists 8–9`  
+- `START_UBIDOTS`, `STOP_UBIDOTS` → `Ists 10–11`
+
+
+#### 4. Control de actuadores y sincronización por tiempo
+
+La lógica general del proceso —activación del motor, compresor y válvulas solenoides— continúa basándose en la detección mediante sensores y en tiempos calibrados durante pruebas físicas del prototipo.
+
+Aunque ahora el sistema reacciona directamente a los sensores IR, los tiempos de activación de las solenoides se mantienen para garantizar un funcionamiento mecánico estable.  
+En particular:
+
+- La detección de un objeto activa una secuencia temporizada.  
+- La selección de la válvula correspondiente sigue dependiendo del color detectado.  
+- Los tiempos de apertura fueron previamente medidos experimentalmente para asegurar correcta clasificación.
+
+
+### Implementación digital CODESYS y configuración Modbus
 
 La integración entre CODESYS y la ESP32 se realizó a través del protocolo **Modbus TCP**, configurando la ESP32 como *esclavo* y el PLC virtual de CODESYS como *maestro*. Para ello, dentro del proyecto se añadieron los siguientes elementos:
 
@@ -658,7 +715,7 @@ La integración entre CODESYS y la ESP32 se realizó a través del protocolo **M
 
 
 
-### Definición de canales Modbus
+#### Definición de canales Modbus
 
 Dentro del servidor se crearon **tres canales principales**, cada uno asociado a una función específica del sistema.
 
@@ -667,7 +724,7 @@ Dentro del servidor se crearon **tres canales principales**, cada uno asociado a
 
 
 
-### **1. Canal de lectura – “Read Multiple Registers” (Función 02)**
+#### **1. Canal de lectura – “Read Multiple Registers” (Función 02)**
 
 Este canal permite leer múltiples registros provenientes de la ESP32. Su propósito es:
 
@@ -682,7 +739,7 @@ Este canal permite leer múltiples registros provenientes de la ESP32. Su propó
 
 Este canal agrupa todas estas señales en un solo bloque de lectura periódica.
 
-### **2. Canal de escritura – “Write Multiple Registers” (Función 16)**
+#### **2. Canal de escritura – “Write Multiple Registers” (Función 16)**
 
 Este canal escribe en la ESP32 los valores de los contadores correspondientes a cada color clasificado.
 
@@ -696,7 +753,7 @@ Este canal escribe en la ESP32 los valores de los contadores correspondientes a 
 
 La ESP32 recibe estos valores y los publica vía MQTT o los procesa según la lógica programada.
 
-### **3. Canal de escritura – “Write Multiple Coils” (Función 15)**
+#### **3. Canal de escritura – “Write Multiple Coils” (Función 15)**
 
 Este canal controla las salidas digitales que activan los actuadores del sistema.
 Su longitud es de **5 coils**, correspondientes a:
@@ -710,7 +767,7 @@ Su longitud es de **5 coils**, correspondientes a:
 Esto permite que el PLC gestione directamente desde el ladder el encendido y apagado de cada actuador.
 
 
-### **Mapeo de variables Modbus**
+#### **Mapeo de variables Modbus**
 
 Finalmente, se realizó el mapeo entre los registros Modbus y las variables del programa en CODESYS. Se asignaron nombres coherentes y se emplearon exactamente esos mismos identificadores dentro del ladder para garantizar la correcta vinculación entre canal y variable.
 
