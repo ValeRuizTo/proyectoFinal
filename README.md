@@ -793,6 +793,69 @@ Finalmente, se realizó el mapeo entre los registros Modbus y las variables del 
 
 
 
+
+
+## Sistema de Alimentación y Distribución de voltaje
+Para garantizar el funcionamiento estable de todos los elementos del prototipo, incluyendo el compresor, el motor de la banda transportadora, las electroválvulas neumáticas, los fototransistores y el sensor de color, se implementó un esquema de suministro eléctrico segmentado y seguro, adecuado para una maqueta de automatización industrial.
+
+- **Alimentación principal de potencia (12 V → actuadores)**
+
+El compresor, el motor principal y las válvulas solenoides requieren corrientes superiores a las que puede entregar directamente un ESP32 o un Arduino.
+Por esta razón, se utilizó:
+
+- Una fuente externa de 12 V DC como alimentación principal.
+
+- Los 12 V se distribuyeron hacia dos puentes H, encargados de:
+
+- Asegurar aislamiento relativo entre control y potencia
+
+- Permitir control seguro desde señales lógicas de 3.3 V (ESP32)
+
+Ambos puentes H compartían una misma referencia de tierra (GND) con el ESP32 y la etapa de control, condición necesaria para que las señales digitales fueran interpretadas correctamente.
+
+Los puentes H reducen internamente el voltaje eficaz de salida hacia los actuadores a aproximadamente 9 V, lo cual es adecuado para los motores incluidos en el prototipo y suficiente para accionar las válvulas neumáticas.
+
+- **Alimentación de sensores infrarrojos (5 V)**
+
+Los sensores de presencia basados en fototransistores MH requieren 5 V para operar de forma estable. Para ello:
+
+- Se empleó un Arduino como regulador y distribuidor de 5 V, únicamente como fuente de alimentación (no como controlador).
+
+- Los sensores se conectaron en una protoboard independiente, evitando interferencias provenientes de la etapa de potencia.
+
+- La tierra de esta protoboard se unificó con la tierra general del sistema para mantener referencia común entre sensores y ESP32.
+
+Esto permitió que los sensores entregaran señales digitales limpias y compatibles con las entradas del microcontrolador.
+
+
+- **Alimentación del sensor de color TCS230 (3.3 V)**
+
+El módulo TCS230 opera con niveles lógicos diferentes:
+
+- La señal de salida (OUT) es leída por el ESP32 a 3.3 V
+
+- Sus pines de control (S0–S3) también se manejan a 3.3 V
+
+Por lo tanto:
+
+- El ESP32 alimenta directamente el sensor de color con 3.3 V, evitando riesgos de sobrevoltaje.
+
+- Se mantuvo una protoboard separada para aislar esta etapa del ruido eléctrico de motores y válvulas.
+
+- Esta separación contribuyó a obtener lecturas estables y permitió la calibración automática mediante FreeRTOS sin interferencias de la capa de potencia.
+
+
+| Componente                     | Voltaje     | Fuente principal          | Observación técnica                |
+| ------------------------------ | ----------- | ------------------------- | ---------------------------------- |
+| Compresor neumático            | 12 V        | Fuente externa 12 V       | Controlado por puente H            |
+| Motor banda transportadora     | ~9 V        | Puente H (desde 12 V)     | Señal desde ESP32 vía coil Modbus  |
+| Válvulas solenoides neumáticas | ~9 V        | Puente H (desde 12 V)     | Controladas por coils del ESP32    |
+| Sensores infrarrojos MH        | 5 V         | Arduino (como fuente 5 V) | Tierra compartida con ESP32        |
+| Sensor de color TCS230         | 3.3 V       | ESP32                     | Lectura estable tras calibración   |
+| ESP32 (control Modbus/MQTT)    | 5 V → 3.3 V | USB / regulador interno   | Nivel lógico principal del sistema |
+
+
+
 ## Implementacion fisica
 
 
