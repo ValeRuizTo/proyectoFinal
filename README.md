@@ -353,7 +353,7 @@ La integración entre CODESYS y la ESP32 se realizó a través del protocolo **M
 3. **Servidor Modbus (Slave)**
    Dentro del cliente se incorporó un *Modbus Server* vinculado a la dirección IP de la ESP32.
 
-<img width="500" height="600" alt="image" src="https://github.com/user-attachments/assets/6f5722b9-8224-4900-985f-a0c097fea117" />
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/6f5722b9-8224-4900-985f-a0c097fea117" />
 
 
 
@@ -411,7 +411,7 @@ Esto permite que el PLC gestione directamente desde el ladder el encendido y apa
 
 Finalmente, se realizó el mapeo entre los registros Modbus y las variables del programa en CODESYS. Se asignaron nombres coherentes y se emplearon exactamente esos mismos identificadores dentro del ladder para garantizar la correcta vinculación entre canal y variable.
 
-<img width="800" height="600" alt="image" src="https://github.com/user-attachments/assets/d6c38e16-cb30-496f-a46f-d58e0d9d33e3" />
+<img width="800" height="500" alt="image" src="https://github.com/user-attachments/assets/d6c38e16-cb30-496f-a46f-d58e0d9d33e3" />
 
 
 
