@@ -109,20 +109,33 @@ El diagrama de secuencia muestra el ciclo completo de interacción entre el ESP3
 
 #### 3. Diagrama de secuencia — Publicación MQTT
 
+El proceso de publicación MQTT en el ESP32 implementa la funcionalidad necesaria para enviar los indicadores operativos del sistema hacia la plataforma IIoT Ubidots. El microcontrolador no genera estos valores por sí mismo, sino que los obtiene directamente del PLC virtual en CODESYS mediante registros Modbus. A partir de ellos, construye un mensaje JSON y lo transmite periódicamente al broker MQTT industrial de Ubidots.
+
+El diagrama de secuencia representa de manera precisa este flujo, organizado en cuatro etapas principales:
+
+1. Lectura de datos desde CODESYS (Modbus):
+
+Cada 5 segundos, el ESP32 consulta los registros expuestos por CODESYS, donde se encuentran los contadores de piezas clasificadas por color (rojo, verde, azul).
+Estos registros son leídos mediante la función mb.Hreg() del servidor Modbus implementado en el ESP32.
+
+2. Construcción del paquete JSON:
+
+Con los valores obtenidos, el ESP32 compone un mensaje JSON en el formato requerido por Ubidots, asignando cada contador a su respectiva variable en la nube.
+Este proceso ocurre de forma local dentro del microcontrolador y no involucra comunicación externa.
+
+3. Publicación al broker MQTT de Ubidots
+El ESP32 envía el mensaje al tópico
+
+          /v1.6/devices/esp32
+        
+utilizando el cliente MQTT (PubSubClient). La autenticación se realiza con el token del proyecto y la conexión se mantiene activa mediante reconexión automática en caso de fallo.
+
+4. Actualización del dashboard en la nube
+Una vez recibido por el broker industrial de Ubidots, el mensaje es procesado y los valores se reflejan en el dashboard IIoT del usuario, donde se grafican los contadores y métricas de operación del proceso físico.
 
 
+![.](imagenesWiki/mqtt.png)
 
-.
-
-
-..
-
-
-
-.
-
-
-.
 
 
 
