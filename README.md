@@ -1129,7 +1129,44 @@ La correcta distribución de voltajes permitió:
 - Asegurar estabilidad continua incluso con cargas inductivas.
 
 
+## Trabajo Futuro
 
+A pesar del funcionamiento correcto y estable del sistema, existen varias oportunidades de mejora que pueden elevar la calidad, la robustez y la experiencia del gemelo digital. Estas líneas de trabajo futuro permitirían llevar el proyecto a un nivel más profesional y cercano a una implementación industrial.
+
+1. Mejoras en el diseño físico y la organización del cableado
+
+Actualmente el prototipo cumple funcionalmente, pero el cableado puede organizarse de forma más estética y segura
+
+Rediseñar la cámara de color con materiales rígidos y opacos, con estructura interna optimizada para seguir la estetica del prototipo 
+
+2. Mejora del gemelo digital y animaciones en el HMI
+
+El gemelo digital actual es funcional pero puede enriquecerse en varios aspectos:
+
+- Las fichas no se animan en su desplazamiento.Se puede representar su movimiento en tiempo real según sensores activados.
+-  El movimiento de la banda podria ser mas fluido
+  
+Aunque CODESYS ofrece un HMI robusto, su capacidad gráfica es limitada. Esto conduce al siguiente punto.
+
+3. Migrar el gemelo digital a una plataforma más avanzada (Unity, Unreal, WebGL, etc.)
+
+Para obtener un gemelo digital más inmersivo y visualmente atractivo, se sugiere considerar una transición hacia plataformas especializadas en gráficos:
+
+- Unity 3D:
+Permite simular banda, movimiento continuo, fichas, pistones, válvulas, sensores y flujo de piezas de manera realista. Además, ofrece integración mediante MQTT, TCP/IP o WebSockets.
+
+- Unreal Engine:
+Ideal para animaciones físicas más detalladas.
+
+- Este enfoque permitiría visualizar:
+
+- Movimiento continuo de las piezas.
+
+- Velocidad real de la banda.
+
+- Accionamiento neumático sincronizado.
+
+- Interacciones virtuales más precisas.
 
 ## Conclusiones
 
