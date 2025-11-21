@@ -139,6 +139,7 @@ Una vez recibido por el broker industrial de Ubidots, el mensaje es procesado y 
 
 
 
+
 ### Análisis del proceso
 
 El sistema corresponde a una máquina clasificadora de objetos por color (sorting color machine). El flujo general del proceso es el siguiente:
@@ -166,18 +167,17 @@ El sistema corresponde a una máquina clasificadora de objetos por color (sortin
 
 4. ***Detección de color***
 
-- La pieza ingresa a la cámara de detección (caja roja).
-- El sensor de color mide el valor de reflexión y determina el color:
-  - Blanco
-  - Rojo
-  - Azul
+- La pieza entra en la cámara de detección.
+- El ESP32 ejecuta un hilo FreeRTOS dedicado para medir las frecuencias RGB con el sensor TCS230.
+- Tras la calibración inicial, determina el color mediante comparación delta.
+- El color detectado se registra como entrada lógica Modbus (Ists).
+- CODESYS consulta el registro y actualiza automáticamente el HMI.
+- El color detectado se utiliza como condición para la etapa de clasificación.
 
-- El ESP32 registra el color detectado y lo publica en un registro Modbus.
+Envío a la nube
 
-- El HMI actualiza automáticamente la variable de color detectado.
-
-- El color queda almacenado para usarlo en la etapa de clasificación.
-- El color detectado se publica a Ubidots mediante MQTT
+- Este color no se envía inmediatamente por MQTT, pero influye en los contadores de color que CODESYS mantiene.
+- Más adelante, cuando CODESYS incremente el contador correspondiente, el ESP32 leerá ese valor vía Modbus y lo enviará a Ubidots.
 
 5. ***Confirmación de salida + Temporización***
 
@@ -192,7 +192,7 @@ El sistema corresponde a una máquina clasificadora de objetos por color (sortin
 
 6.***Clasificación por color***
 
-- Una vez finalizado el temporizador, CODESYS activa el registro Modbus que corresponde a la válvula adecuada.El ESP32 recibe el comando y energiza la válvula solenoide (NC).
+- Una vez finalizado el temporizador, CODESYS activa el registro Modbus que corresponde a la válvula adecuada. El ESP32 recibe el comando y energiza la válvula solenoide.
 - La válvula permite el paso de aire comprimido hacia el cilindro neumático.
 - El pistón empuja la pieza hacia su compartimiento de clasificación correcto.
 - La válvula se desactiva cuando se completa el tiempo de actuación.
@@ -201,14 +201,19 @@ El sistema corresponde a una máquina clasificadora de objetos por color (sortin
 
 7. ***Verificación de clasificación***
 
-- En cada compartimiento de salida hay un sensor infrarrojo final (F3, F4, F5).
+- En cada rampa final existe un sensor infrarrojo que confirma la llegada de la pieza.
+- El ESP32 registra esta detección y actualiza el Modbus.
+- CODESYS recibe la señal y:
+  - verifica la clasificación exitosa,
+  - incrementa el contador correspondiente (rojo, verde o azul),
+  - envía el nuevo valor del contador al ESP32
 
-- Al detectar la llegada de la pieza, el sensor envía la señal al ESP32.
+Publicación a Ubidots
 
-- El ESP32 actualiza los registros Modbus, informando a CODESYS que la clasificación fue exitosa.
-
-- El HMI muestra el resultado y marca la etapa como completada.
-- El registro se envia a Ubidots mediante MQTT
+-  El ESP32 toma estos contadores desde los HREG Modbus.
+-  Construye un JSON con los valores acumulados.
+-  Publica los datos mediante MQTT cada 5 segundos.
+-  Ubidots actualiza el dashboard con la información del proceso.
 
 8. ***Detención temporal y reinicio del ciclo***
 
@@ -216,6 +221,7 @@ El sistema corresponde a una máquina clasificadora de objetos por color (sortin
 - El sistema reinicia todas las salidas (Reset).
 - Se vuelve al estado de inicio del proceso (S000).
 - El sistema queda listo para recibir la siguiente pieza.
+
 
 ### Restricciones de diseño
 
