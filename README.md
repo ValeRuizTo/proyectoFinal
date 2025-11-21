@@ -778,44 +778,148 @@ Finalmente, se realizó el mapeo entre los registros Modbus y las variables del 
 
 ## Implementacion fisica
 
-## Validación manual
 
-- Se comprobó manualmente:
+![.](imagenesWiki/code3.png)
 
-  - El funcionamiento de la banda transportadora.
 
-  - La activación de cada válvula neumática y de los cilindros (lo que empuja las fichas hacia la linea de clasificacion).
 
-  - El reconocimiento de las piezas por parte de los sensores instalados.
 
-Durante esta validación se identificó que los sensores fotoresistivos que originalmente venían con el kit no funcionaban correctamente y, además, la cantidad disponible no era suficiente para cubrir todas las etapas del proceso. Para resolver esta limitación se implementaron módulos externos de la serie MH Sensor, basados en fototransistores, los cuales se utilizaron como reemplazo de las fotoresistencias. Estos módulos permiten detectar de forma confiable el paso de las fichas y verificar su llegada a la clasificación correspondiente.
 
-En la cámara de detección (caja roja) se encuentra el sensor de color, encargado de identificar la tonalidad de cada ficha. Sin embargo, este componente no cuenta con una salida física directa, por lo que no pudo ser probado manualmente en esta etapa. Su validación queda supeditada a la lógica programada en el PLC y a la integración completa del sistema automatizado.
+En la imagen se muestra el prototipo completo de la máquina clasificadora de piezas por color, montado con el kit Fischertechnik Sorting Line with Color Detection. El sistema incluye la banda transportadora, la cámara de detección (caja de carton), los cilindros neumáticos que desvían las piezas hacia los compartimientos y los sensores de presencia y clasificación.
+En la cámara de detección (caja de carton) se encuentra el sensor de color, encargado de identificar la tonalidad de cada ficha. 
 
-![.](imagenesWiki/img.png)
-En la imagen se muestra el prototipo completo de la máquina clasificadora de piezas por color, montado con el kit Fischertechnik Sorting Line with Color Detection. El sistema incluye la banda transportadora, la cámara de detección (caja roja), los cilindros neumáticos que desvían las piezas hacia los compartimientos y los sensores de presencia y clasificación.
 
 Debido a que los sensores fotoresistivos originales no funcionaban correctamente ni eran suficientes en cantidad, fueron reemplazados por módulos de sensores con fototransistor de la serie MH Sensor, visibles en la parte frontal de la maqueta. Estos permiten detectar de manera confiable el paso de las fichas y confirmar su llegada a cada compartimiento de clasificación.
 
-El montaje incluye además el cableado eléctrico de prueba y las conexiones neumáticas de las válvulas, lo que permitió validar manualmente el funcionamiento de la banda transportadora, los actuadores y la detección básica de fichas antes de la integración con el PLC.
-
-![.](imagenesWiki/img1.png)
+![.](imagenesWiki/code4.png)
 
 
-En la  imagen se observa la válvula 2 activada, correspondiente a la clasificación de piezas de color rojo. Para realizar la prueba de forma manual, se conectó el cable de control de la valvula alternando entre positivo (activación) y negativo (desactivación). Al aplicar el nivel positivo, la válvula se acciona y el cilindro neumático desplaza la pieza hacia el compartimiento correspondiente; al devolverlo a negativo, la válvula regresa a su posición inicial.
-
-Durante esta validación se mantuvo el compresor encendido de manera continua, con una línea siempre en positivo y la otra en negativo, garantizando el suministro de aire sin importar cuál valvula se desee probar. De esta manera, se pudo comprobar individualmente el correcto funcionamiento de cada válvula solenoide y su respectivo actuador neumático.
+El montaje incluye además el cableado eléctrico de prueba y las conexiones neumáticas de las válvulas y todos los sensores
 
 
-![.](imagenesWiki/img2.png)
 
-En esta etapa se realizó la misma validación manual, pero aplicada a la válvula de la línea de clasificación de color rojo. Al igual que en la prueba anterior, la electroválvula fue accionada conectando su entrada de control a positivo (activación) y regresándola a negativo (desactivación). De este modo, se comprobó el desplazamiento correcto del cilindro neumático encargado de desviar las piezas hacia el compartimiento destinado al color rojo, asegurando que la línea de clasificación responde adecuadamente bajo condiciones reales de operación.
 
-![.](imagenesWiki/img3.png)
 
-Finalmente, se realizó la comprobación manual de la válvula correspondiente a la línea de clasificación de color azul, la cual es la última en el proceso. Esta válvula fue activada de la misma manera que las anteriores, aplicando positivo en su entrada de control para accionar el cilindro neumático y regresándola a negativo para su retorno.
 
-Al tratarse de la última estación de clasificación, esta válvula es la que idealmente se activa tras un mayor tiempo de conteo, dado que las fichas deben recorrer toda la banda transportadora antes de llegar a su posición. La prueba permitió verificar que el actuador neumático responde de manera adecuada y que la línea azul está lista para integrarse en la secuencia automática controlada por el PLC.
+## Validación manual 
+La validación manual del prototipo se realizó antes de la integración completa con CODESYS y el gemelo digital, con el fin de asegurar que todos los componentes mecánicos y electrónicos funcionaran correctamente de forma independiente. Esta etapa permitió detectar fallas, reemplazar sensores quemados anteriormente con las pruevas de voltaje y confirmar la operación básica del sistema antes de la automatización.
+
+
+1. Verificación del funcionamiento de actuadores y banda transportadora
+
+Se comprobaron individualmente:
+
+- El motor M1 de la banda transportadora.
+
+- El compresor del sistema neumático.
+
+- Las tres válvulas solenoides responsables de desviar las piezas hacia cada estación.
+
+Para realizar la prueba de actuadores:
+
+- Se aplicó VCC a la entrada de control de cada válvula para activarla.
+
+- Se aplicó GND para desactivarla.
+
+Con esto se validó:
+
+- La respuesta inmediata del pistón y la fuerza con la que empujaba.
+
+- El retorno mecánico mediante resorte.
+
+
+Estas pruebas se realizaron para V1 (blanco), V2 (rojo) y V3 (azul), confirmando que los actuadores estaban operativos antes de conectarlos al control del PLC.
+
+
+
+2. Validación de fototransistores MH:
+
+Durante la validación se identificó que los fototransistores MH que habíamos utilizado previamente estaban dañados, debido a pruebas anteriores en las que se aplicaron tensiones de 9 V y 12 V, superando su rango seguro de operación. Esto dejó varios sensores inutilizables y otros con comportamiento inestable.
+
+Además, se comprobó que la luz ambiental afectaba la reflectividad, provocando activaciones falsas y falta de detección cuando la iluminación incidía directamente en el fototransistor. Para obtener lecturas confiables, fue necesario cubrir la entrada de luz externa, aislando la barrera óptica.
+
+Una vez reemplazados y protegidos de la luz ambiente, los fototransistores fueron probados individualmente conectando su salida OUT al ESP32 y verificando la detección del paso de cada ficha.
+Los sensores validados fueron:
+
+- F1: Entrada al sistema
+
+- F2: Salida de la cámara de color
+
+- F3, F4, F5: Llegada a cada estación de clasificación
+
+Todos los sensores operaron de forma estable tras su reemplazo y aislamiento de la luz externa.
+
+3. Validación prioritaria de los sensores críticos
+
+Aunque todos los sensores fueron probados, se dio especial prioridad a los que impactan directamente la lógica del proceso:
+
+- Sensor de entrada a la cámara de detección (F1)
+
+Es el que inicia el ciclo completo del sistema. Su activación debe encender la banda y preparar la lectura del color.
+
+- Sensor de color (TCS230)
+
+Este sensor no puede probarse manualmente mediante hardware, ya que:
+
+Su salida no es un simple 0/1, genera frecuencias proporcionales a la intensidad RGB.
+
+Requiere procesamiento por software. Por esto, su validación se realizó observando:
+
+1. El comportamiento del algoritmo de calibración.
+
+2. El cambio de flags Modbus (ROJO / AZUL).
+3. La variacion en las frecuencias y el promedio de cada color
+4. Pruebas directas en CODESYS y comunicación con el ESP32.
+
+- Sensor de salida de la cámara (F2)
+
+Este sensor determina el inicio de los temporizadores que seleccionan la estación correcta según el color detectado.
+
+Tanto F1 como F2 fueron probados reiteradamente debido a su rol central en la secuencia automática.
+
+
+4. Validación del proceso completo: pruebas desde hardware y desde el HMI
+
+Una vez validados individualmente sensores y actuadores, se realizaron pruebas completas del flujo físico–digital:
+
+a) Activación del sistema desde el botón físico START (Input0_8)
+
+Se comprobó que:
+
+- El ESP32 detectara correctamente el pulsador.
+
+- CODESYS recibiera el estado mediante Modbus ISTS.
+
+- El proceso iniciara sin intervención del HMI.
+
+b) Activación del proceso desde el HMI en CODESYS
+
+Se probó el inicio del ciclo desde el gemelo digital:
+
+- CODESYS envía las órdenes vía Modbus.
+
+- El ESP32 energiza banda, motor y válvulas según corresponda.
+
+- La interfaz gráfica refleja en tiempo real cada etapa.
+
+ ![.](imagenesWiki/code1.png)
+
+c) Pruebas combinadas (sensor + HMI + actuadores)
+
+Se realizaron secuencias completas:
+
+- Ficha entra → F1 activa → banda arranca.
+
+- Ficha llega a la caja  → lectura del color.
+
+- Ficha sale → F2 activa → se dispara el temporizador asociado.
+
+- Se activa la válvula correcta (V1/V2/V3).
+
+- Se valida la llegada con F3/F4/F5.
+- 
+ ![.](imagenesWiki/code2.png)
+
 
 ## Conclusiones
 
