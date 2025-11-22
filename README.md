@@ -799,7 +799,6 @@ Finalmente, se realizó el mapeo entre los registros Modbus y las variables del 
 
 
 
-
 ## Sistema de Alimentación y Distribución de voltaje
 Para garantizar el funcionamiento estable de todos los elementos del prototipo, incluyendo el compresor, el motor de la banda transportadora, las electroválvulas neumáticas, los fototransistores y el sensor de color, se implementó un esquema de suministro eléctrico segmentado y seguro, adecuado para una maqueta de automatización industrial.
 
@@ -859,6 +858,9 @@ Por lo tanto:
 | Sensor de color TCS230         | 3.3 V       | ESP32                     | Lectura estable tras calibración   |
 | ESP32 (control Modbus/MQTT)    | 5 V - 3.3 V | USB / regulador interno   | Nivel lógico principal del sistema |
 
+Finalmente, se muestra el esquema de interconexión:
+
+<img width="800" height="700" alt="circuit_image (1) 1" src="https://github.com/user-attachments/assets/1fe86eed-bdbc-4cfa-8e0e-b51e159e6ce0" />
 
 
 ## Implementacion fisica
